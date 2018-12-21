@@ -13,7 +13,7 @@ Description: Deep compositional spatial models are standard low-rank spatial
              and, second, when the weights in each layer are random. Estimation 
              and inference is done using TensorFlow, which makes use of 
              graphical processing units. 
-License: GPL (>2.1)
+License: Apache License 2.0
 Imports: 
     data.table,
     dplyr,
@@ -22,8 +22,6 @@ Imports:
     reticulate,
     tensorflow
 SystemRequirements: TensorFlow (https://www.tensorflow.org/),
-        TensorFlow Probability
-        (https://www.tensorflow.org/probability/)
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.1.0
