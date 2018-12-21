@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1545347528794.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1176312349",
+    "id" : "5BD7011",
+    "lastKnownWriteTime" : 1545367338,
+    "last_content_update" : 1545367338235,
+    "path" : "~/Dropbox/CurrentProjects/Wollongong/pkgs/deepspat/R/deepspat_main.R",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "285,43",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

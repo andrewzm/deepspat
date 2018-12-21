@@ -1,0 +1,17 @@
+library(MODIS)
+library(dplyr)
+library(rgdal)
+fnames <- dir(pattern = "*\\.hdf$")
+for(i in seq_along(fnames)) {
+  f <- fnames[i]
+  sds <- getSds(f)
+  X <- readGDAL(sds$SDS4gdal[1], as.is = TRUE)
+  my_hdf_layer = raster(X)
+  image_size <- dim(my_hdf_layer)
+  df <- expand.grid(y = 1:image_size[2], x = 1:image_size[1])
+  df$z <- X$band1
+  df2 <- sample_n(df, 100000)
+  save(df, file = paste0("~/Wollongong/deep_spat_models/deep_spat_src/MODIStest2/data/MODISdata", i, ".rda"))
+}
+
+

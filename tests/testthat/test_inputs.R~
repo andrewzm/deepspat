@@ -1,0 +1,134 @@
+context("inputs")
+
+n <- 20
+m <- 10L
+f1 <- y1 ~ x1 + x2
+f2 <- cbind(y1, y2) ~ x1 + x2
+df <- data.frame(y1 = rnorm(n), y2 = rnorm(n),
+                 x1 = rnorm(n), x2 = rnorm(n))
+X1 <- matrix(df$x1)
+X2 <- matrix(df$x2)
+Y1 <- matrix(df$y1)
+Y2 <- matrix(df$y2)
+
+X <- cbind(X1, X2)
+Y <- cbind(Y1, Y2)
+
+diagQnorm1 <- matrix(runif(n))
+diagQnorm2 <- matrix(runif(2*n), ncol = 2)
+sess_run <- tf$Session()$run
+
+test_that("check_inputs does not crash with defaults", {
+  expect_true({.check_inputs(); TRUE}, TRUE)
+})
+
+test_that("conversion of input to TF works", {
+
+  TF_objs1 <- input_to_tf(f = f1, data = df, diagQnorm = diagQnorm1)
+  TF_objs2 <- input_to_tf(f = f2, data = df, diagQnorm = diagQnorm2)
+
+  expect_equal(dim(TF_objs1$X_tf), c(n, 2))
+  expect_equal(dim(TF_objs1$Y_tf), c(n, 1))
+  expect_equal(dim(TF_objs1$diagQnorm_tf), c(n, 1))
+
+  expect_equal(dim(TF_objs2$X_tf), c(n, 2))
+  expect_equal(dim(TF_objs2$Y_tf), c(n, 2))
+  expect_equal(dim(TF_objs2$diagQnorm_tf), c(n, 2))
+
+  expect_equal(sess_run(TF_objs1$X_tf), X, tolerance = 1e-6)
+  expect_equal(sess_run(TF_objs1$Y_tf), Y1, tolerance = 1e-6)
+  expect_equal(sess_run(TF_objs1$diagQnorm_tf), diagQnorm1, tolerance = 1e-6)
+
+  expect_equal(sess_run(TF_objs2$X_tf), X, tolerance = 1e-6)
+  expect_equal(sess_run(TF_objs2$Y_tf), Y, tolerance = 1e-6)
+  expect_equal(sess_run(TF_objs2$diagQnorm_tf), diagQnorm2, tolerance = 1e-6)
+})
+
+test_that("initial parameter settings make sense", {
+
+  TF_init <- init_pars(f = f2, data = df,
+                       m.inducing = m,
+                       dim.hidden = c(2L, 3L),
+                       diagQnorm = diagQnorm2)
+
+  expect_equal(length(TF_init$Z_tf), 3L)
+  expect_equal(length(TF_init$MH_tf), 2L)
+  expect_equal(length(TF_init$SH_tf), 2L)
+  expect_equal(length(TF_init$SIGMA2F_tf), 3L)
+  expect_equal(length(TF_init$ALPHA_tf), 3L)
+
+  expect_equal(dim(TF_init$TAU_tf[[3]]), c(1, 2))
+  init <- tf$global_variables_initializer()
+  sess_run(init)
+  #expect_lt(1/sess_run(TF_init$tau_tf)[1], var(Y1))
+  #expect_lt(1/sess_run(TF_init$tau_tf)[2], var(Y2))
+
+  expect_equal(dim(TF_init$Z_tf[[1]]), c(m, 2))
+  expect_equal(dim(TF_init$Z_tf[[2]]), c(m, 2))
+  expect_equal(dim(TF_init$Z_tf[[3]]), c(m, 3))
+
+  expect_equal(dim(TF_init$MH_tf[[1]]), c(n, 2))
+  expect_equal(dim(TF_init$MH_tf[[2]]), c(n, 3))
+
+  expect_equal(dim(TF_init$SH_tf[[1]]), c(n, 2))
+  expect_equal(dim(TF_init$SH_tf[[2]]), c(n, 3))
+
+  expect_equal(dim(TF_init$ALPHA_tf[[1]]), c(1, 2))
+  expect_equal(dim(TF_init$ALPHA_tf[[2]]), c(1, 2))
+  expect_equal(dim(TF_init$ALPHA_tf[[3]]), c(1, 3))
+
+  ind_ranges <- apply(apply(sess_run(TF_init$Z_tf[[1]]), 2, range), 2, diff)
+  inp_ranges <- apply(apply(X, 2, range), 2, diff)
+  expect_true(all(ind_ranges < inp_ranges), TRUE)
+
+})
+
+test_that("the function deep_spat_cost works", {
+  set.seed(1)
+  TF_objs1 <- input_to_tf(f = f1, data = df, diagQnorm = diagQnorm1)
+  TF_init <- init_pars(f = f1, data = df,
+                       m.inducing = m,
+                       dim.hidden = c(2L, 3L),
+                       diagQnorm = diagQnorm1)
+
+  r1 <- rfun(mh_out = TF_init$MH_tf[[1]],
+             sh_out = TF_init$SH_tf[[1]],
+             z = TF_init$Z_tf[[1]],
+             mh_in = TF_objs1$X_tf,
+             sh_in = tf$multiply(TF_objs1$X_tf, 0),
+             tau = TF_init$TAU_tf[[1]],
+             sigma2f = TF_init$SIGMA2F_tf[[1]],
+             alpha = TF_init$ALPHA_tf[[1]],
+             use_tf = 1)
+
+  r2 <- rfun(mh_out = TF_init$MH_tf[[2]],
+             sh_out = TF_init$SH_tf[[2]],
+             z = TF_init$Z_tf[[2]],
+             mh_in = TF_init$MH_tf[[1]],
+             sh_in = TF_init$SH_tf[[1]],
+             tau = TF_init$TAU_tf[[2]],
+             sigma2f = TF_init$SIGMA2F_tf[[2]],
+             alpha = TF_init$ALPHA_tf[[2]],
+             use_tf = 1)
+
+  g1 <- gfun(y = TF_objs1$Y_tf,
+            diagQnorm = TF_objs1$diagQnorm_tf,
+            tau = TF_init$TAU_tf[[3]],
+            z = TF_init$Z_tf[[3]],
+            mh_in = TF_init$MH_tf[[2]],
+            sh_in = TF_init$SH_tf[[2]],
+            sigma2f = TF_init$SIGMA2F_tf[[3]],
+            alpha = TF_init$ALPHA_tf[[3]],
+            use_tf = 1)
+
+  ELBO = r1 + r2 + g1 +  entropy_tf(TF_init$SH[[1]]) +  entropy_tf(TF_init$SH[[2]])
+
+  set.seed(1)
+  test_cost <- deep_spat_tf_setup(f = f1, data = df, m.inducing = m,
+                              dim.hidden = c(2L, 3L),
+                              diagQ = diagQnorm1, family = "gaussian")$Cost
+
+  init <- tf$global_variables_initializer()
+  sess_run(init)
+  expect_equal(-sess_run(test_cost), sess_run(ELBO), tolerance = 1e-5)
+})

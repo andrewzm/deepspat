@@ -1,0 +1,118 @@
+############################################################################
+## Title:  Reproducible script for analysing the results of the 2D experiment
+##         in Section 4.2
+## Author: Andrew Zammit-Mangion
+## Date:   20 December 2018
+#############################################################################
+
+library(ggplot2)
+library(gridExtra)
+library(dplyr)
+library(verification)
+
+## Functions for the diagnostics
+MAPE <- function(true, pred) mean(abs(true - pred))
+RMSPE <- function(true, pred) sqrt(mean((true - pred)^2))
+CRPS <- function(true, pred, pred_var) crps(true, cbind(pred, sqrt(pred_var)))$CRPS
+IS95 <- function(true, pred95l, pred95u) {
+  alpha = 0.05
+  ISs <- (pred95u - pred95l) + 2/alpha * (pred95l - true) * (true < pred95l) +
+                        2/alpha * (true - pred95u) * (true > pred95u)
+  mean(ISs)
+}
+
+## Extract results and combine from the two studies
+results <- NULL
+for(f in dir("results/"))  {
+    simname <- strsplit(f, "\\.")[[1]][1]
+    method <- strsplit(f, "json_")[[1]][2]
+    load(paste0("results/", f))
+    simdata <- jsonlite::read_json(paste0("data/", simname, ".json"), simplifyVector = TRUE)
+    results <- rbind(results,
+                   data.frame(fname = f,
+                              simname = simname,
+                              method = tail(strsplit(f, "_")[[1]], n = 1),
+                              MAPE = MAPE(simdata$f_true, df_pred$pred_mean),
+                              RMSPE = RMSPE(simdata$f_true, df_pred$pred_mean),
+                              CRPS = CRPS(simdata$f_true, df_pred$pred_mean, df_pred$pred_var),
+                              IS95 = IS95(simdata$f_true, df_pred$pred_95l, df_pred$pred_95u)))
+}
+options(digits = 3)
+print(results)
+
+#### Plot results for the SDSP for both cases
+for(f in c("AWU_RBF_2D.json_VB", "AWU_RBF_LFT_2D.json_VB")) {
+
+  load(paste0("results/", f, ".rda"))
+
+  g1a <- ggplot(df_pred) +
+    geom_tile(aes(s1, s2, fill = h1)) +
+    scale_fill_distiller(palette = "Spectral") +
+    theme_bw() + ggtitle("Warping function for h1")
+  g1b <- ggplot(df_pred) +
+    geom_tile(aes(s1, s2, fill = h2)) +
+    scale_fill_distiller(palette = "Spectral") +
+    theme_bw() + ggtitle("Warping function for h2")
+
+  cmax <- max(dplyr::select(df_pred, y, pred_mean))
+  cmin <- min(dplyr::select(df_pred, y, pred_mean))
+
+  g2a <- ggplot(df_pred) +
+    geom_tile(aes(s1, s2, fill = y)) +
+    scale_fill_distiller(palette = "Greys", limits = c(cmin, cmax), name = "Y") +
+    theme_bw() + coord_fixed()  + theme(text = element_text(size=15))# + ggtitle("Truth")
+
+  g2b <- ggplot(df_pred) +
+    geom_tile(aes(s1, s2, fill = pred_mean)) +
+    scale_fill_distiller(palette = "Greys", limits = c(cmin, cmax), name = "pred") +
+    theme_bw() + coord_fixed() + theme(text = element_text(size=15))#+ ggtitle("Prediction")
+
+  g3a <- ggplot(df_pred) +
+    geom_tile(aes(s1, s2, fill = pmin(abs(y - pred_mean), 0.5))) +
+    scale_fill_distiller(palette = "Greys") +
+    theme_bw() + coord_fixed() + theme(text = element_text(size=15))# + ggtitle("Prediction Standard Error")
+
+  g3b <- ggplot(df_pred) +
+    geom_tile(aes(s1, s2, fill = pmin(sqrt(pred_var), 0.25)))+
+    scale_fill_distiller(palette = "Greys", name = "s.e.") +
+    theme_bw() + coord_fixed() + theme(text = element_text(size=15))# + ggtitle("Prediction Standard Error")
+
+
+  simdata <- jsonlite::read_json(paste0("data/", strsplit(f, "_VB")[[1]]), simplifyVector = TRUE)
+  df1 <- data.frame(s1 = simdata$s[, 1],
+                    s2 = simdata$s[, 2],
+                    h1 = simdata$swarped[, 1],
+                    h2 = simdata$swarped[, 2]) %>%
+    mutate(s1c = as.integer(s1*100),
+           s2c = as.integer(s2*100))
+  checkers1 <- deepspat:::polygons_from_points(df1, every = 3)
+  count <- length(unique(checkers1$id))
+  grid1 <- (ggplot(checkers1) + geom_polygon(aes(x, y, group = id,
+                                                 fill = as.logical((id +floor(id/sqrt(count))) %% 2)), colour="black") +
+              scale_fill_grey(start = 0.1, end = 0.9) + theme_bw())  +
+    guides(fill=FALSE, alpha = FALSE) +
+    xlab(expression(f[n1])) + ylab(expression(f[n2]))  + coord_fixed(ratio = 1)  + theme(text = element_text(size=20))
+
+
+  df2 <- df_pred %>%
+    mutate(s1c = as.integer(s1*100),
+           s2c = as.integer(s2*100))
+
+  checkers2 <- deepspat:::polygons_from_points(df2, every = 3)
+  count <- length(unique(checkers1$id))
+  grid2 <- (ggplot(checkers2) + geom_polygon(aes(x, y, group = id,
+                                      fill=as.logical((id +floor(id/sqrt(count))) %% 2)), colour="black") +
+         scale_fill_grey(start = 0.1, end = 0.9) + theme_bw())  +
+    guides(fill=FALSE, alpha = FALSE) +
+    xlab(expression(f[n1])) + ylab(expression(f[n2]))  + coord_fixed(ratio = 1) + theme(text = element_text(size=20))
+
+  gplot1 <- grid.arrange(grid1, grid2, nrow = 1)
+  gplot2 <- grid.arrange(g2a, g2b, g3b, nrow = 1)
+  gplotall <- grid.arrange(gplot1, gplot2, nrow = 2,
+                           layout_matrix = matrix(c(1,1,1,2,2,1,1,1,2,2),5, 2))
+    ggsave(gplotall, file = paste0("img/",
+                                   strsplit(f,"\\.")[[1]][1],
+                                   ".png"),
+         width = 14, height = 10)
+
+}

@@ -1,0 +1,157 @@
+#####################################################################
+## Title:  Reproducible script for analysing the results of the MODIS
+##         experiment in Section 4.3 using the SDSP, a GP with exp.
+##         covariance function and an FRK model
+## Author: Andrew Zammit-Mangion
+## Date:   20 December 2018
+#####################################################################
+
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(SpatialVx)
+library(verification)
+library(xtable)
+
+## Set plotting theme
+theme_set(theme_bw(base_size = 20))
+
+## Functions for computing the diagnostics
+MAE <- function(true, pred) mean(abs(true - pred))
+RMSPE <- function(true, pred) sqrt(mean((true - pred)^2))
+CRPS <- function(true, pred, pred_var) crps(true, cbind(pred, sqrt(pred_var)))$CRPS
+IS95 <- function(true, pred95l, pred95u) {
+  alpha = 0.05
+  ISs <- (pred95u - pred95l) + 2/alpha * (pred95l - true) * (true < pred95l) +
+    2/alpha * (true - pred95u) * (true > pred95u)
+  mean(ISs)
+}
+
+## Scaling function for converting the scaled integers to radiances
+scaleval <- function(z, i) {
+  if(i == 1) (z*scalez + meanz)*0.02457055 else  (z*scalez + meanz)*0.024570528
+}
+
+## Scaling function for converting the scaled integers s.es to radiances
+scalese <- function(se, i) {
+  if(i == 1) (se*scalez)*0.02457055 else if(i == 2) (se*scalez)*0.024570528
+}
+
+## Create data frame for threat scores and define the insets for each scene
+results <- ts_df <- NULL
+zoomranges <- list(list(list(xlim = c(75, 125), ylim = c(25, 60)),
+                        list(xlim = c(150, 200), ylim = c(90, 125))),
+                   list(list(xlim = c(100, 150), ylim = c(40, 75)),
+                        list(xlim = c(150, 200), ylim = c(100, 135))))
+
+## For each scene
+for(i in 1:2) {
+
+  ## Load the scene and extract all the results (add on meas.- error variance
+  ## since the predictions are of the observations)
+  load(paste0("results/MODISdata", i,"._VB_results.rda"))
+  df_pred2 <- df_pred
+  df_pred2$pred_SDSP <- scaleval(df_pred2$pred_mean, i)
+  df_pred2$pred_var_SDSP_obs <- scalese(sqrt(df_pred2$pred_var + 1/precy), i)^2
+  load(paste0("results/MODISdata", i,"_krige_results.rda"))
+  df_pred2$pred_krige <- scaleval(df_pred$pred_krige, i)
+  df_pred2$pred_var_krige_obs <- scalese(sqrt(df_pred$pred_var_krige + krig_obs_var), i)^2
+  load(paste0("results/MODISdata", i,"._ML1layer_results.rda"))
+  df_pred2$pred_FRK <- scaleval(df_pred$pred_mean, i)
+  df_pred2$pred_var_FRK_obs <- scalese(sqrt(df_pred$pred_var + 1/precy), i)^2
+  df_pred <- df_pred2
+  df_pred$z <- scaleval(df_pred$z,i)
+
+  ## Compute diagnostics for the SDSP
+  df_pred_val <- df_pred[idx_val, ]
+  results[[i]] <- summarise(df_pred_val,
+                            case = i,
+                            Model = "SDSP",
+                            MAPE = MAE(z, pred_SDSP),
+                            RMSPE = RMSPE(z, pred_SDSP),
+                            CRPS = CRPS(z, pred_SDSP, pred_var_SDSP_obs),
+                            IS95 = IS95(z, pred_SDSP - 2*sqrt(pred_var_SDSP_obs),
+                                        pred_SDSP + 2*sqrt(pred_var_SDSP_obs)))
+
+  ## Compute diagnostics for the GP
+  results[[i]] <- rbind(results[[i]],
+                        summarise(df_pred_val,
+                                  case = i,
+                                  Model = "GP",
+                                  MAPE = MAE(z, pred_krige),
+                                  RMSPE = RMSPE(z, pred_krige),
+                                  CRPS = CRPS(z, pred_krige, pred_var_krige_obs),
+                                  IS95 = IS95(z, pred_krige - 2*sqrt(pred_var_krige_obs),
+                                              pred_krige + 2*sqrt(pred_var_krige_obs))))
+
+  ## Compute diagnostics for the FRK model
+  results[[i]] <- rbind(results[[i]],
+                        summarise(df_pred_val,
+                                  case = i,
+                                  Model = "FRK",
+                                  MAPE = MAE(z, pred_FRK),
+                                  RMSPE = RMSPE(z, pred_FRK),
+                                  CRPS = CRPS(z, pred_FRK, pred_var_FRK_obs),
+                                  IS95 = IS95(z, pred_FRK - 2*sqrt(pred_var_FRK_obs),
+                                              pred_FRK + 2*sqrt(pred_var_FRK_obs))))
+
+  ## Set thresholds for each scene and inset (160 in each case)
+  Zth <- matrix(c(160, 160, 160, 160), 2, 2)
+
+  ## For each inset in scene
+  for(k in 1:2) {
+
+    ## Initialise data frame for thresholds of Z^th_pred
+    ts_df_sub <- data.frame(thr = seq(50, 250, by = 5),
+                            Case = paste0("Case ", i),
+                            Inset = paste0("Inset ", k))
+    ## Size of inset
+    nx <- 49
+    ny <- 34
+
+    ## Extract prediction  insets for each model
+    xmin <- zoomranges[[i]][[k]]$xlim[1]
+    xmax <- zoomranges[[i]][[k]]$xlim[2]
+    ymin <- zoomranges[[i]][[k]]$ylim[1]
+    ymax <- zoomranges[[i]][[k]]$ylim[2]
+    df_sub <- filter(df_pred, x > xmin & x < xmax & y > ymin & y < ymax)
+    Zmat <- matrix(df_sub$z, ny, nx)
+    SDSPmat <- matrix(df_sub$pred_SDSP, ny, nx)
+    FRKmat <- matrix(df_sub$pred_FRK, ny, nx)
+    krigemat <- matrix(df_sub$pred_krige, ny, nx)
+
+    ## Compute the threat score for each prediction
+    for(j in seq_along(ts_df_sub$thr)) {
+      ts_df_sub$SDSP[j] <- vxstats(Zmat < Zth[k, i], SDSPmat < ts_df_sub$thr[j])$ts
+      ts_df_sub$FRK[j] <- vxstats(Zmat < Zth[k, i], FRKmat < ts_df_sub$thr[j])$ts
+      ts_df_sub$GP[j] <- vxstats(Zmat < Zth[k, i], krigemat < ts_df_sub$thr[j])$ts
+    }
+    ts_df <- rbind(ts_df, ts_df_sub)
+  }
+}
+
+## Print the diagnostic results for each scene
+print(bind_rows(results))
+print(xtable(dplyr::select(results[[1]], -case) %>% arrange(Model),
+             align = rep("l", 6)), include.rownames = FALSE)
+print(xtable(dplyr::select(results[[2]], -case) %>% arrange(Model),
+             align = rep("l", 6)), include.rownames = FALSE)
+
+## Put the threat scores all in one long data frame
+Zth_df <- data.frame(Case = c("Case 1", "Case 1", "Case 2", "Case 2"),
+                            Inset = c("Inset 1", "Inset 2", "Inset 1", "Inset 2"),
+                            thr = c(Zth))
+ts_df2 <- tidyr::gather(ts_df, Model, TS, -thr, -Case, -Inset)
+
+## Generate the line plots of the threat scores for each inset in each scene
+Cases <- c("Case 1", "Case 2")
+Insets <- c("Inset 1", "Inset 2")
+for(i in seq_along(Cases)) {
+  for(j in seq_along(Insets)) {
+    ts_df2_sub <- filter(ts_df2, Case == Cases[i] & Inset == Insets[j] & !(Model == "FRK"))
+    gts <- ggplot(ts_df2_sub) + geom_line(aes(thr, TS, linetype = Model)) +
+      geom_vline(data = Zth_df, aes(xintercept = thr)) +
+      xlab(expression(paste(Z[pred]^th , " (W/",m^2,"/", mu, "m/st)")))
+    ggsave(gts,  file = paste0("img/MODIS", i, "zoom", j, "_TS.png"), width = 9, height = 5.5)
+  }
+}

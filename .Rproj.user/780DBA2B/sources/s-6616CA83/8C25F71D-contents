@@ -1,0 +1,199 @@
+#####################################################################
+## Title:  Reproducible script for plotting the results of the MODIS
+##         experiment in Section 4.3 using the SDSP, a GP with exp.
+##         covariance function and an FRK model
+## Author: Andrew Zammit-Mangion
+## Date:   20 December 2018
+#####################################################################
+
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(verification)
+library(xtable)
+
+## Set plotting theme
+theme_set(theme_bw(base_size = 20))
+
+## Scaling function for converting the scaled integers to radiances
+scaleval <- function(z, i) {
+  if(i == 1) (z*scalez + meanz)*0.02457055 else  (z*scalez + meanz)*0.024570528
+}
+
+## Scaling function for converting the scaled integers s.es to radiances
+scalese <- function(se, i) {
+  if(i == 1) (se*scalez)*0.02457055 else if(i == 2) (se*scalez)*0.024570528
+}
+
+## For each scene
+results <- plots <- grids <- list()
+for(i in 1:2) {
+
+  ## Load the scenes
+  load(paste0("results/MODISdata", i,"._VB_results.rda"))
+  df_pred2 <- df_pred
+  load(paste0("results/MODISdata", i,"_krige_results.rda"))
+  df_pred <- left_join(df_pred, df_pred2)
+
+  ## Find colour limits
+  cmin <- cmax <- NA
+  cmin[i] <- scaleval(min(df_pred$z, df_pred$pred_mean, df_pred$pred_krige), i)
+  cmax[i] <- scaleval(max(df_pred$z, df_pred$pred_mean, df_pred$pred_krige), i)
+
+  ## Plot the data
+  g0 <- ggplot(df_pred[idx_obs, ]) +
+    geom_point(aes(x, y, colour = scaleval(z, i))) +
+    scale_colour_distiller(palette = "Greys", limits = c(cmin[i], cmax[i]), name = "Z") +
+    xlab(expression(s[1])) + ylab(expression(s[2])) +
+    coord_fixed()
+
+  ## Plot the "true" process
+  g1 <- ggplot(df_pred) +
+    geom_tile(aes(x, y, fill = scaleval(z, i))) +
+    scale_fill_distiller(palette = "Greys", limits = c(cmin[i], cmax[i]), name = "Y") +
+    xlab(expression(s[1])) + ylab(expression(s[2])) +
+    coord_fixed()
+
+  ## Plot the prediction from the SDSP
+  g2 <- ggplot(df_pred) +
+    geom_tile(aes(x, y, fill = scaleval(pred_mean, i))) +
+    scale_fill_distiller(palette = "Greys", limits = c(cmin[i], cmax[i]), name = "pred") +
+    xlab(expression(s[1])) + ylab(expression(s[2])) +
+    coord_fixed()
+
+  ## Plot the prediction from the GP
+  g3 <- ggplot(df_pred) +
+    geom_tile(aes(x, y, fill = scaleval(pred_krige, i))) +
+    scale_fill_distiller(palette = "Greys", limits = c(cmin[i], cmax[i]), name = "pred") +
+    xlab(expression(s[1])) + ylab(expression(s[2])) +
+    coord_fixed()
+
+  ## Set saturation colour for the s.e. scale of the SDSP
+  errmin_SDSP <- scalese(quantile(sqrt(df_pred$pred_var + 1/precy), 0.02), i)
+  errmax_SDSP <- scalese(quantile(sqrt(df_pred$pred_var + 1/precy), 0.98), i)
+
+  ## Plot the prediction standard error of the SDSP
+  g4 <- ggplot(df_pred) +
+    geom_tile(aes(x, y, fill = pmax(pmin(scalese(sqrt(pred_var + 1/precy),i), errmax_SDSP), errmin_SDSP))) +
+    scale_fill_distiller(palette = "Greys", limits = c(errmin_SDSP, errmax_SDSP), name = "se") +
+    xlab(expression(s[1])) + ylab(expression(s[2])) +
+    coord_fixed()
+
+  ## Set saturation colour for the s.e. scale of the GP
+  errmin_krige <- scalese(quantile(sqrt(df_pred$pred_var_krige + krig_obs_var), 0.02), i)
+  errmax_krige <- scalese(quantile(sqrt(df_pred$pred_var_krige + krig_obs_var), 0.98), i)
+
+  ## Plot the prediction standard error of the GP
+  g5 <- ggplot(df_pred) +
+    geom_tile(aes(x, y, fill = pmax(pmin(scalese(sqrt(pred_var_krige + krig_obs_var), i), errmax_krige), errmin_krige))) +
+    scale_fill_distiller(palette = "Greys",  limits = c(errmin_krige, errmax_krige), name = "se") +
+    xlab(expression(s[1])) + ylab(expression(s[2])) +
+    coord_fixed()
+
+
+  ## Plot the transformation
+  df_pred$s1c <- as.integer(df_pred$x)
+  df_pred$s2c <- as.integer(df_pred$y)
+  checkers1 <- deepspat:::polygons_from_points(df_pred, every = 3)
+  checkers1$xbin = match(checkers1$s1c, unique(checkers1$s1c))
+  grid1 <- (ggplot(checkers1) + geom_polygon(aes(x, y, group = id,
+                                                 fill = as.logical((id + xbin)%% 2)), colour="black") +
+              scale_fill_grey(start = 0.1, end = 0.9) + theme_bw())  +
+    guides(fill=FALSE, alpha = FALSE) +
+    xlab(expression(f[n1])) + ylab(expression(f[n2]))  + coord_fixed(ratio = 1)  + theme(text = element_text(size=20))
+
+
+  ## Function for plotting a zoomed in inset
+  zoomplot <- function(xlim, ylim, to_plot, name = "pred") {
+    df_pred$to_plot <- df_pred[[to_plot]]
+    ggplot(filter(df_pred, x > xlim[1] & x  < xlim[2] & y > ylim[1] & y < ylim[2])) +
+      geom_tile(aes(x, y, fill = scaleval(to_plot, i))) +
+      scale_fill_distiller(palette = "Greys", limits = c(cmin[i], cmax[i]), guide = FALSE) +
+      theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank(),
+            axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) +
+      coord_fixed()
+  }
+
+  ## Thresholds for generating the binary map for each scene/inset
+  Zth <- matrix(c(160, 160, 160, 160), 2, 2)
+
+  ## Insets for the first scene
+  if(i == 1) {
+
+    ## Rectangles plotted on true process
+    rect_df <- data.frame(xmin = c(75, 150),
+                          xmax = c(125, 200),
+                          ymin = c(25, 90),
+                          ymax = c(60, 125),
+                          label = c("A", "B"))
+    g1 <- g1 + geom_rect(data = rect_df,
+                         aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+                         colour = "black", size = 2, fill = NA) +
+          geom_text(data = rect_df, aes(xmin + 7, ymax - 7, label = label), fontface = "bold", size = 10)
+
+    ## Zoomed-in inset plots for first inset
+    zoom1_true <- zoomplot(c(75, 125), c(25, 60), "z", "Z")
+    zoom1_SDSP <- zoomplot(c(75, 125), c(25, 60), "pred_mean", "pred")
+    zoom1_krige <- zoomplot(c(75, 125), c(25, 60), "pred_krige", "pred")
+    df_pred <- mutate(df_pred, mask = scaleval(z, i) < Zth[1, 1])
+    zoom1_mask <- zoomplot(c(75, 125), c(25, 60), "mask", "Z") +
+      scale_fill_distiller(palette = "Greys", guide = FALSE)
+
+    ## Zoomed-in inset plots for second inset
+    zoom2_true <- zoomplot(c(150, 200), c(90, 125), "z", "Z")
+    zoom2_SDSP <- zoomplot(c(150, 200), c(90, 125), "pred_mean", "pred")
+    zoom2_krige <- zoomplot(c(150, 200), c(90, 125), "pred_krige", "pred")
+    df_pred <- mutate(df_pred, mask = scaleval(z, i) < Zth[2, 1])
+    zoom2_mask <- zoomplot(c(150, 200), c(90, 125), "mask", "Z") +
+      scale_fill_distiller(palette = "Greys", guide = FALSE)
+
+    ## Insets for the first scene
+  } else if(i == 2) {
+
+    ## Rectangles plotted on true process
+    rect_df <- data.frame(xmin = c(100, 150),
+                          xmax = c(150, 200),
+                          ymin = c(40, 100),
+                          ymax = c(75, 135),
+                          label = c("C", "D"))
+    g1 <- g1 + geom_rect(data = rect_df,
+                         aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+                         colour = "black", size = 2, fill = NA) +
+          geom_text(data = rect_df, aes(xmin + 7, ymax - 7, label = label), col = "white", fontface = "bold", size = 10)
+
+    ## Zoomed-in inset plots for first inset
+    zoom1_true <- zoomplot(c(100, 150), c(40, 75), "z", "Z")
+    zoom1_SDSP <- zoomplot(c(100, 150), c(40, 75), "pred_mean", "pred")
+    zoom1_krige <- zoomplot(c(100, 150), c(40, 75), "pred_krige", "pred")
+    df_pred <- mutate(df_pred, mask = scaleval(z, i) < Zth[1, 2])
+    zoom1_mask <- zoomplot(c(100, 150), c(40, 75), "mask", "Z") +
+      scale_fill_distiller(palette = "Greys", guide = FALSE)
+
+    ## Zoomed-in inset plots for second inset
+    zoom2_true <- zoomplot(c(150, 200), c(100, 135), "z", "Z")
+    zoom2_SDSP <- zoomplot(c(150, 200), c(100, 135), "pred_mean", "pred")
+    zoom2_krige <- zoomplot(c(150, 200), c(100, 135), "pred_krige", "pred")
+    df_pred <- mutate(df_pred, mask = scaleval(z, i) < Zth[1, 2])
+    zoom2_mask <- zoomplot(c(150, 200), c(100, 135), "mask", "Z") +
+      scale_fill_distiller(palette = "Greys", guide = FALSE)
+  }
+
+  ## Save all images
+  ggsave(g0, file = paste0("img/MODIS", i, "obs.png"), width = 9, height = 5.5)
+  ggsave(g1, file = paste0("img/MODIS", i, "truth.png"), width = 9, height = 5.5)
+  ggsave(g2, file = paste0("img/MODIS", i, "pred_SDSP.png"), width = 9, height = 5.5)
+  ggsave(g3, file = paste0("img/MODIS", i, "pred_krige.png"), width = 9, height = 5.5)
+  ggsave(g4, file = paste0("img/MODIS", i, "se_SDSP.png"), width = 9, height = 5.5)
+  ggsave(g5, file = paste0("img/MODIS", i, "se_krige.png"), width = 9, height = 5.5)
+  ggsave(zoom1_true, file = paste0("img/MODIS", i, "zoom1_true.png"), width = 9, height = 5.5)
+  ggsave(zoom1_mask, file = paste0("img/MODIS", i, "zoom1_mask.png"), width = 9, height = 5.5)
+  ggsave(zoom1_SDSP, file = paste0("img/MODIS", i, "zoom1_SDSP.png"), width = 9, height = 5.5)
+  ggsave(zoom1_krige, file = paste0("img/MODIS", i, "zoom1_krige.png"), width = 9, height = 5.5)
+  ggsave(zoom2_true, file = paste0("img/MODIS", i, "zoom2_true.png"), width = 9, height = 5.5)
+  ggsave(zoom2_mask, file = paste0("img/MODIS", i, "zoom2_mask.png"), width = 9, height = 5.5)
+  ggsave(zoom2_SDSP, file = paste0("img/MODIS", i, "zoom2_SDSP.png"), width = 9, height = 5.5)
+  ggsave(zoom2_krige, file = paste0("img/MODIS", i, "zoom2_krige.png"), width = 9, height = 5.5)
+  ggsave(grid1, file = paste0("img/MODIS", i, "warping.png"), width = 9, height = 9)
+
+}
+

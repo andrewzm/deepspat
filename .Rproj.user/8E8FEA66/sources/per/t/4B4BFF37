@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1545367911773.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "4294181791",
+    "id" : "4B4BFF37",
+    "lastKnownWriteTime" : 1545370986,
+    "last_content_update" : 1545370986156,
+    "path" : "~/Dropbox/CurrentProjects/Wollongong/pkgs/deepspat/R/sim_data.R",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "63,42",
+        "scrollLine" : "55"
+    },
+    "relative_order" : 8,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
