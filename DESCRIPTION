@@ -1,7 +1,7 @@
 Package: deepspat
 Type: Package
 Title: Deep Compositional Spatial Models
-Version: 0.1.0
+Version: 0.1.1
 Author: Andrew Zammit-Mangion
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
 Description: Deep compositional spatial models are standard low-rank spatial 
