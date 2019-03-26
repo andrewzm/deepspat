@@ -19,29 +19,21 @@ cov_exp_tf <- function(x1, x2 = x1, sigma2f, alpha) {
   d <- ncol(x1)
   n1 <- nrow(x1)
   n2 <- nrow(x2)
-  D <- tf$constant(matrix(0, n1, n2), name='D', dtype = tf$float32)
+  D <- tf$constant(matrix(0, n1, n2), name = 'D', dtype = tf$float32)
 
-##  for(i in 1:d) {
-##    x1i <- x1[, i, drop = FALSE]
-##    x2i <- x2[, i, drop = FALSE]
-##    sep <- x1i - tf$transpose(x2i)
-##    sep2 <- tf$abs(sep)
-##    alphasep2 <- tf$multiply(alpha[1, i, drop = FALSE], sep2)
-##    D <- tf$add(D, alphasep2)
-##  }
-##  D <- tf$multiply(-0.5, D)
-    
-   for(i in 1:d) {
+  for(i in 1:d) {
     x1i <- x1[, i, drop = FALSE]
     x2i <- x2[, i, drop = FALSE]
-    sep <- x1i - tf$matrix_transpose(x2i)
- 
-    sep2 <- tf$square(sep)
-    D <- tf$add(D, sep2)
+    sep <- x1i - tf$transpose(x2i)
+    sep2 <- tf$square(sep)    
+    ## sep2 <- tf$abs(sep)
+    alphasep2 <- tf$multiply(alpha[1, i, drop = FALSE], sep2)
+    D <- tf$add(D, alphasep2)
   }
- 
+
+  ##  D <- tf$multiply(-0.5, D)
   D <- D + 1e-30
-  D <- tf$multiply(tf$multiply(-1,alpha), tf$sqrt(D))
+  D <- tf$multiply(-1, tf$sqrt(D))
   K <- tf$multiply(sigma2f, tf$exp(D))
   return(K)
 
