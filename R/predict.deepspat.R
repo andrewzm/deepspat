@@ -68,10 +68,12 @@ predict.deepspat <- function(object, newdata = newdata, nsims = 100L, ...) {
                      smax_tf = d$scalings[[i + 1]]$max)
     }
     PHI_pred <- d$layers[[d$nlayers]]$f(h_tf_all[[d$nlayers]])
-    Spost_tf <- tf$matrix_inverse(d$Qpost_tf)
+    #Spost_tf <-  tf$matrix_inverse(d$Qpost_tf)
     pred_tf <- tf$matmul(PHI_pred, d$mupost_tf) + d$data_scale_mean_tf
-    Lpost_tf <-  tf$cholesky_lower(Spost_tf)
-    sims <- tf$matmul(Lpost_tf, tf$random_normal(c(d$MC, d$layers[[d$nlayers]]$r, nsims)))
+    #Lpost_tf <-  tf$cholesky_lower(Spost_tf)
+    #sims <- tf$matmul(Lpost_tf, tf$random_normal(c(d$MC, d$layers[[d$nlayers]]$r, nsims)))
+    Rpost_tf <-  tf$linalg$transpose(tf$cholesky_lower(d$Qpost_tf))
+    sims <- tf$linalg$solve(Rpost_tf, tf$random_normal(c(d$MC, d$layers[[d$nlayers]]$r, nsims)))
     allsims <- pred_tf + tf$matmul(PHI_pred, sims)
     allsims <- tf$transpose(allsims, c(1L, 0L, 2L)) %>%
       tf$reshape(c(-1L, d$MC*nsims))
