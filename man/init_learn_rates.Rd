@@ -4,19 +4,26 @@
 \alias{init_learn_rates}
 \title{Initialise learning rates}
 \usage{
-init_learn_rates(sigma2y = 5e-04, covfun = 0.01, eta_mean = 0.1,
-  eta_sd = 0.1, LFTpars = 0.01)
+init_learn_rates(sigma2y = 5e-04, covfun = 0.01, sigma2eta = 1e-04,
+  eta_mean = 0.1, eta_sd = 0.1, LFTpars = 0.01, AFFpars = 0.01,
+  rho = 0.1)
 }
 \arguments{
 \item{sigma2y}{learning rate for the measurement-error variance}
 
 \item{covfun}{learning rate for the covariance-function (or matrix) parameters at the top layer}
 
+\item{sigma2eta}{learning rate for the process variance}
+
 \item{eta_mean}{learning rate for the weight estimates or variational means}
 
 \item{eta_sd}{learning rate for the variational standard deviations (SDSP only)}
 
 \item{LFTpars}{learning rate for the parameters of the Mobius transformation}
+
+\item{AFFpars}{learning rate for the parameters of the affine transformation}
+
+\item{rho}{learning rate for the correlation parameter in the multivariate model}
 }
 \value{
 \code{init_learn_rates} returns a list with the learning rates. Call \code{str(init_learn_rates())} to see the
