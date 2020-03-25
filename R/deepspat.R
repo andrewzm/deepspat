@@ -27,5 +27,5 @@
 #' @import tensorflow
 #' @importFrom data.table rbindlist
 #' @importFrom methods is
-#' @importFrom stats dist model.matrix rnorm runif terms var
+#' @importFrom stats dist model.matrix qnorm rnorm runif terms var
 NULL

@@ -64,6 +64,49 @@ get_depvars <- function(f) {
   depvars
 }
 
+get_depvars_multivar <- function(f) {
+  . <- NULL
+  stopifnot(is(f, "formula"))
+  if(!attr(terms(f), "response")) {
+    depvars <- NULL
+  } else {
+    gr <- grepl("cbind", as.character(f))
+    idx <- which(gr)
+    if(length(idx) > 0) {
+      terms(f)
+      depvars <- ((attr(terms(f), "variables") %>%
+                     as.character())[2] %>%
+                    strsplit(","))[[1]] %>%
+        gsub("cbind\\(|\\)|\\s", "", .)
+    } else  {
+      depvars <- c(all.vars(f)[[1]], all.vars(f)[[2]])
+    }
+  }
+  depvars
+}
+
+get_depvars_multivar2 <- function(f) {
+  . <- NULL
+  stopifnot(is(f, "formula"))
+  if(!attr(terms(f), "response")) {
+    depvars <- NULL
+  } else {
+    gr <- grepl("cbind", as.character(f))
+    idx <- which(gr)
+    if(length(idx) > 0) {
+      terms(f)
+      depvars <- ((attr(terms(f), "variables") %>%
+                     as.character())[2] %>%
+                    strsplit(","))[[1]] %>%
+        gsub("cbind\\(|\\)|\\s", "", .)
+    } else  {
+      depvars <- c(all.vars(f)[[1]], all.vars(f)[[2]], all.vars(f)[[3]], all.vars(f)[[4]])
+    }
+  }
+  depvars
+}
+
+
 
 pinvsolve <- function(A, b, reltol = 1e-6) {
   # Compute the SVD of the input matrix A

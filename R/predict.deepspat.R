@@ -33,7 +33,7 @@
 #'   d <- deepspat(f = z ~ s - 1, data = df, layers = layers, method = "ML", nsteps = 100L)
 #'   pred <- predict(d, dfnew)
 #' }
-predict.deepspat <- function(object, newdata = newdata, nsims = 100L, ...) {
+predict.deepspat <- function(object, newdata, nsims = 100L, ...) {
 
   d <- object
   mmat <- model.matrix(update(d$f, NULL ~ .), newdata)
