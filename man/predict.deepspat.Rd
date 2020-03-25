@@ -4,8 +4,7 @@
 \alias{predict.deepspat}
 \title{Deep compositional spatial model}
 \usage{
-\method{predict}{deepspat}(object, newdata = newdata, nsims = 100L,
-  ...)
+\method{predict}{deepspat}(object, newdata, nsims = 100L, ...)
 }
 \arguments{
 \item{object}{the deepspat object}
