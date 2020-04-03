@@ -20,8 +20,12 @@ cov_exp_tf <- function(x1, x2 = x1, sigma2f, alpha) {
   n1 <- nrow(x1)
   n2 <- nrow(x2)
   square_mat <- tf$cast(tf$math$equal(n1,n2), "float32")
-  Dsquared <- tf$constant(matrix(0, n1, n2), name = 'D', dtype = tf$float32)
-    
+  Reg <- Dsquared <- tf$constant(matrix(0, n1, n2), 
+                                 name = 'D', 
+                                 dtype = tf$float32)
+  Reg <- tf$linalg$set_diag(Reg, rep(1e-30, min(n1, n2)))  
+  Reg <- tf$multiply(square_mat, Reg)
+  
   for(i in 1:d) {
     x1i <- x1[, i, drop = FALSE]
     x2i <- x2[, i, drop = FALSE]
@@ -31,7 +35,7 @@ cov_exp_tf <- function(x1, x2 = x1, sigma2f, alpha) {
     Dsquared <- tf$add(Dsquared, alphasep2)
   }
 
-  Dsquared <- Dsquared + tf$multiply(square_mat, tf$multiply(1e-30, tf$eye(n1)))
+  Dsquared <- Dsquared + Reg
   D <- tf$sqrt(Dsquared)
   K <- tf$multiply(sigma2f, tf$exp(-0.5 * D))
     
