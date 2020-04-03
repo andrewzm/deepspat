@@ -4,19 +4,11 @@
 \alias{deepspat_multivar}
 \title{Deep multivariate compositional spatial model}
 \usage{
-deepspat_multivar(
-  f,
-  data,
-  g = ~1,
-  layers_asym = NULL,
-  layers = NULL,
-  method = c("REML"),
-  family = c("matern_stat_symm", "matern_stat_asymm", "matern_nonstat_symm",
-    "matern_nonstat_asymm"),
-  par_init = initvars(),
-  learn_rates = init_learn_rates(),
-  nsteps = 150L
-)
+deepspat_multivar(f, data, g = ~1, layers_asym = NULL, layers = NULL,
+  method = c("REML"), family = c("matern_stat_symm",
+  "matern_stat_asymm", "matern_nonstat_symm", "matern_nonstat_asymm"),
+  par_init = initvars(), learn_rates = init_learn_rates(),
+  nsteps = 150L)
 }
 \arguments{
 \item{f}{formula identifying the dependent variables and the spatial inputs in the covariance}

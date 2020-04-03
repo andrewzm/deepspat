@@ -15,14 +15,10 @@ Description: Deep compositional spatial models are standard low-rank spatial
              and inference is done using TensorFlow, which makes use of 
              graphical processing units. 
 License: Apache License 2.0
-Imports: 
-    data.table,
-    dplyr,
-    Matrix,
-    methods,
-    reticulate,
-    tensorflow
+Imports: data.table, dplyr, Matrix, methods, reticulate, tensorflow
 SystemRequirements: TensorFlow (https://www.tensorflow.org/),
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 6.1.0
+RoxygenNote: 6.1.1
+NeedsCompilation: no
+Packaged: 2020-04-02 23:27:32 UTC; andrew

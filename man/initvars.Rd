@@ -5,10 +5,10 @@
 \title{Initialise weights and parameters}
 \usage{
 initvars(sigma2y = 0.1, l_top_layer = 0.5, sigma2eta_top_layer = 1,
-  transeta_mean_init = list(AWU = -3, RBF = -0.8, LFT = 1),
-  transeta_mean_prior = list(AWU = -3, RBF = -0.8, LFT = NA),
-  transeta_sd_init = list(AWU = 0.01, RBF = 0.01, LFT = 0.01),
-  transeta_sd_prior = list(AWU = 2, RBF = 2, LFT = NA))
+  nu = 1.5, transeta_mean_init = list(AWU = -3, RBF = -0.8, LFT = 1,
+  AFF_1D = 1, AFF_2D = 1), transeta_mean_prior = list(AWU = -3, RBF =
+  -0.8, LFT = NA), transeta_sd_init = list(AWU = 0.01, RBF = 0.01, LFT =
+  0.01), transeta_sd_prior = list(AWU = 2, RBF = 2, LFT = NA))
 }
 \arguments{
 \item{sigma2y}{initial value for the measurement-error variance}
@@ -17,8 +17,10 @@ initvars(sigma2y = 0.1, l_top_layer = 0.5, sigma2eta_top_layer = 1,
 
 \item{sigma2eta_top_layer}{initial value for the variance of the weights at the top layer}
 
+\item{nu}{initial value for the smoothness parameter}
+
 \item{transeta_mean_init}{list of initial values for the initial weights (or the initial variational means of these weights). The list
-contains three values, one for the AWU, one for the RBF, and the other for the LFT (Mobius)}
+contains five values, one for the AWU, one for the RBF, one for the LFT (Mobius), and two for the affine transformation}
 
 \item{transeta_mean_prior}{same as \code{transeta_mean_init} but for the prior mean of the weights (SDSP only)}
 
