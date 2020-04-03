@@ -4,7 +4,6 @@ cov_matern_tf <- function(x1, x2 = x1, sigma2f, alpha, nu) {
   d <- ncol(x1)
   n1 <- nrow(x1)
   n2 <- nrow(x2)
-  square_mat <- tf$cast(tf$math$equal(n1,n2), "float32")
   D <- tf$constant(matrix(0, n1, n2), name = 'D', dtype = tf$float32)
   
   ## Find the distance by summing the squared differences in each dimension
@@ -17,8 +16,10 @@ cov_matern_tf <- function(x1, x2 = x1, sigma2f, alpha, nu) {
   }
   
   ## Add on a small constant for numeric stability
-  D <- D + tf$multiply(square_mat, tf$multiply(1e-15, tf$eye(n1)))
-  
+  if (n1 == n2){
+    D <- D + tf$multiply(1e-15, tf$eye(n1))
+  }
+
   ## Compute distance
   D <- tf$sqrt(D)
   
