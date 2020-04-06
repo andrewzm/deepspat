@@ -5,10 +5,6 @@ cov_matern_tf <- function(x1, x2 = x1, sigma2f, alpha, nu) {
   n1 <- nrow(x1)
   n2 <- nrow(x2)
   D <- tf$constant(matrix(0, n1, n2), name = 'D', dtype = tf$float32)
-  square_mat <- tf$cast(tf$math$equal(n1,n2), "float32")
-  Reg <- tf$constant(matrix(0, n1, n2), name = 'D', dtype = tf$float32)
-  Reg <- tf$linalg$set_diag(Reg, rep(1e-15, min(n1, n2)))  
-  Reg <- tf$multiply(square_mat, Reg)
   
   ## Find the distance by summing the squared differences in each dimension
   for(i in 1:d) {
@@ -20,8 +16,8 @@ cov_matern_tf <- function(x1, x2 = x1, sigma2f, alpha, nu) {
   }
   
   ## Add on a small constant for numeric stability
-  D <- D + Reg
-
+  D <- D + 1e-15
+  
   ## Compute distance
   D <- tf$sqrt(D)
   
