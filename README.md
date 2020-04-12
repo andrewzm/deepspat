@@ -13,7 +13,19 @@ Resources
 
 A manuscript detailing the theory and implementation in the univariate setting is available [here](https://arxiv.org/abs/1906.02840), while a manuscript detailng the theory and implementation in a multivariate setting will be available shortly. An informal blog post summarising the manuscript concerning the univariate setting is available [here](https://andrewzm.wordpress.com/2019/06/13/deep-compositional-spatial-models/).
 
+Installation Instructions
+-------------------------
+
+This is an `R` package. Please install `devtools` and then install this package by typing
+```
+library("devtools")
+install_github("andrewzm/deepspat")
+```
+in an `R` console.
+
+
 Reproducible Code
 -----------------
 
 Code using this package for reproducing the results shown in the manuscript describing the univariate setting will be available shortly. Code for the results shown in manuscript describing the multivariate setting is available [here](https://github.com/quanvu17/deepspat_multivar).
+
