@@ -5,15 +5,16 @@ Date: 15 March 2020
 Version: 0.1.2
 Author: Andrew Zammit-Mangion and Quan Vu
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
-Description: Deep compositional spatial models are standard low-rank spatial 
-             models coupled with a bijective warping function of the spatial 
+Description: Deep compositional spatial models are standard spatial covariance
+             models coupled with an injective warping function of the spatial 
              domain. The warping function is constructed through a composition 
-             of multiple elemental bijective functions in a deep-learning 
-             framework. The package implements two cases; first, when these 
-             functions are known up to some weights that need to be estimated, 
-             and, second, when the weights in each layer are random. Estimation 
-             and inference is done using TensorFlow, which makes use of 
-             graphical processing units. 
+             of multiple elemental injective functions in a deep-learning 
+             framework. The package implements two cases for the univariate setting; first,
+	     when these warping functions are known up to some weights that
+	     need to be estimated, and, second, when the weights in each layer are random.
+	     In the multivariate setting only the former case is available.
+	     Estimation and inference is done using TensorFlow, which makes use of 
+             graphics processing units. 
 License: Apache License 2.0
 Imports: 
     data.table,
