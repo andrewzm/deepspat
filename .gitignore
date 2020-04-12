@@ -1,2 +1,3 @@
 *.tar.gz
 R/deepspat_main_GP.R
+.Rproj.user/
