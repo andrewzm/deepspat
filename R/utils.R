@@ -100,7 +100,7 @@ get_depvars_multivar2 <- function(f) {
                     strsplit(","))[[1]] %>%
         gsub("cbind\\(|\\)|\\s", "", .)
     } else  {
-      depvars <- c(all.vars(f)[[1]], all.vars(f)[[2]], all.vars(f)[[3]], all.vars(f)[[4]])
+      depvars <- c(all.vars(f)[[1]], all.vars(f)[[2]], all.vars(f)[[3]])
     }
   }
   depvars

@@ -1,9 +1,9 @@
-#' @title Deep multivariate compositional spatial model
-#' @description Prediction function for the fitted deepspat_multivar object
-#' @param object the deepspat_multivar object
+#' @title Deep bivariate compositional spatial model
+#' @description Prediction function for the fitted deepspat_bivar_GP object
+#' @param object the deepspat_bivar_GP object
 #' @param newdata data frame containing the prediction locations
 #' @param ... currently unused
-#' @return \code{predict.deepspat_multivar} returns a list with the following item
+#' @return \code{predict.deepspat_bivar_GP} returns a list with the following item
 #' \describe{
 #'  \item{"df_pred"}{Data frame containing the predictions/prediction intervals at the prediction locations}
 #'  }
@@ -13,14 +13,14 @@
 #' dfnew <- data.frame(s1 = rnorm(20), s2 = rnorm(20))
 #' layers <- c(AWU(r = 50, dim = 1L, grad = 200, lims = c(-0.5, 0.5)))
 #' \dontrun{
-#' \dontrun{d <- deepspat_multivar(f = z1 + z2 ~ s1 + s2 - 1,
+#' \dontrun{d <- deepspat_bivar_GP(f = z1 + z2 ~ s1 + s2 - 1,
 #'                                 data = df, g = ~ 1,
 #'                                 layers = layers, method = "REML",
 #'                                 family = "matern_nonstat_symm",
 #'                                 nsteps = 100L)}
-#'   pred <- predict.deepspat_multivar(d, dfnew)
+#'   pred <- predict.deepspat_bivar_GP(d, dfnew)
 #' }
-predict.deepspat_multivar <- function(object, newdata, ...) {
+predict.deepspat_bivar_GP <- function(object, newdata, ...) {
   
   d <- object
   mmat <- model.matrix(update(d$f, NULL ~ .), newdata)

@@ -4,9 +4,16 @@
 \alias{init_learn_rates}
 \title{Initialise learning rates}
 \usage{
-init_learn_rates(sigma2y = 5e-04, covfun = 0.01, sigma2eta = 1e-04,
-  eta_mean = 0.1, eta_sd = 0.1, LFTpars = 0.01, AFFpars = 0.01,
-  rho = 0.1)
+init_learn_rates(
+  sigma2y = 5e-04,
+  covfun = 0.01,
+  sigma2eta = 1e-04,
+  eta_mean = 0.1,
+  eta_sd = 0.1,
+  LFTpars = 0.01,
+  AFFpars = 0.01,
+  rho = 0.1
+)
 }
 \arguments{
 \item{sigma2y}{learning rate for the measurement-error variance}

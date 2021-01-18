@@ -1,5 +1,5 @@
-#' @title Deep multivariate compositional spatial model
-#' @description Constructs a deep multivariate compositional spatial model
+#' @title Deep bivariate compositional spatial model
+#' @description Constructs a deep bivariate compositional spatial model
 #' @param f formula identifying the dependent variables and the spatial inputs in the covariance
 #' @param data data frame containing the required data
 #' @param g formula identifying the independent variables in the linear trend
@@ -10,7 +10,7 @@
 #' @param par_init list of initial parameter values. Call the function \code{initvars()} to see the structure of the list
 #' @param learn_rates learning rates for the various quantities in the model. Call the function \code{init_learn_rates()} to see the structure of the list
 #' @param nsteps number of steps when doing gradient descent times two, three or five (depending on the family of model)  
-#' @return \code{deepspat_multivar} returns an object of class \code{deepspat_multivar} with the following items
+#' @return \code{deepspat_bivar_GP} returns an object of class \code{deepspat_bivar_GP} with the following items
 #' \describe{
 #'  \item{"f"}{The formula used to construct the covariance model}
 #'  \item{"g"}{The formula used to construct the linear trend model}
@@ -50,12 +50,12 @@
 #' @examples
 #' df <- data.frame(s1 = rnorm(100), s2 = rnorm(100), z1 = rnorm(100), z2 = rnorm(100))
 #' layers <- c(AWU(r = 50, dim = 1L, grad = 200, lims = c(-0.5, 0.5)))
-#' \dontrun{d <- deepspat_multivar(f = z1 + z2 ~ s1 + s2 - 1,
+#' \dontrun{d <- deepspat_bivar_GP(f = z1 + z2 ~ s1 + s2 - 1,
 #'                                 data = df, g = ~ 1,
 #'                                 layers = layers, method = "REML",
 #'                                 family = "matern_nonstat_symm",
 #'                                 nsteps = 100L)}
-deepspat_multivar <- function(f, data, g = ~ 1, layers_asym = NULL, layers = NULL,
+deepspat_bivar_GP <- function(f, data, g = ~ 1, layers_asym = NULL, layers = NULL,
                               method = c("REML"),
                               family = c("matern_stat_symm",
                                          "matern_stat_asymm",
@@ -135,10 +135,10 @@ deepspat_multivar <- function(f, data, g = ~ 1, layers_asym = NULL, layers = NUL
     ##############################################################
     ##Training
     if(method == "REML") {
-      NMLL <- logmarglik_GP_multivar_matern_reml(s_in = s_tf,
+      NMLL <- logmarglik_GP_bivar_matern_reml(s_in = s_tf,
                                                  X = X,
                                                  Sobs_tf = Sobs_tf,
-                                                 l_tf_1 = l_tf_1, l_tf_2 = l_tf_2, , l_tf_12 = l_tf_12,
+                                                 l_tf_1 = l_tf_1, l_tf_2 = l_tf_2, l_tf_12 = l_tf_12,
                                                  sigma2_tf_1 = sigma2_tf_1, sigma2_tf_2 = sigma2_tf_2, sigma2_tf_12 = sigma2_tf_12,
                                                  nu_tf_1 = nu_tf_1, nu_tf_2 = nu_tf_2, nu_tf_12 = nu_tf_12,
                                                  z_tf = z_tf,
@@ -214,10 +214,10 @@ deepspat_multivar <- function(f, data, g = ~ 1, layers_asym = NULL, layers = NUL
     ##############################################################
     ##Training
     if(method == "REML") {
-      NMLL <- logmarglik_GP_multivar_matern_reml(s_in = swarped_tf[[nlayers+1]],
+      NMLL <- logmarglik_GP_bivar_matern_reml(s_in = swarped_tf[[nlayers+1]],
                                                  X = X,
                                                  Sobs_tf = Sobs_tf,
-                                                 l_tf_1 = l_tf_1, l_tf_2 = l_tf_2, , l_tf_12 = l_tf_12,
+                                                 l_tf_1 = l_tf_1, l_tf_2 = l_tf_2, l_tf_12 = l_tf_12,
                                                  sigma2_tf_1 = sigma2_tf_1, sigma2_tf_2 = sigma2_tf_2, sigma2_tf_12 = sigma2_tf_12,
                                                  nu_tf_1 = nu_tf_1, nu_tf_2 = nu_tf_2, nu_tf_12 = nu_tf_12,
                                                  z_tf = z_tf,
@@ -333,11 +333,11 @@ deepspat_multivar <- function(f, data, g = ~ 1, layers_asym = NULL, layers = NUL
     ##############################################################
     ##Training
     if(method == "REML") {
-      NMLL <- logmarglik_GP_multivar_matern_reml(s_in = swarped_tf1_asym[[nlayers_asym+1]],
+      NMLL <- logmarglik_GP_bivar_matern_reml(s_in = swarped_tf1_asym[[nlayers_asym+1]],
                                                  s_in2 = swarped_tf2_asym[[nlayers_asym+1]],
                                                  X = X,
                                                  Sobs_tf = Sobs_tf,
-                                                 l_tf_1 = l_tf_1, l_tf_2 = l_tf_2, , l_tf_12 = l_tf_12,
+                                                 l_tf_1 = l_tf_1, l_tf_2 = l_tf_2, l_tf_12 = l_tf_12,
                                                  sigma2_tf_1 = sigma2_tf_1, sigma2_tf_2 = sigma2_tf_2, sigma2_tf_12 = sigma2_tf_12,
                                                  nu_tf_1 = nu_tf_1, nu_tf_2 = nu_tf_2, nu_tf_12 = nu_tf_12,
                                                  z_tf = z_tf,
@@ -463,11 +463,11 @@ deepspat_multivar <- function(f, data, g = ~ 1, layers_asym = NULL, layers = NUL
     ##############################################################
     ##Training
     if(method == "REML") {
-      NMLL <- logmarglik_GP_multivar_matern_reml(s_in = swarped_tf1[[nlayers+1]],
+      NMLL <- logmarglik_GP_bivar_matern_reml(s_in = swarped_tf1[[nlayers+1]],
                                                  s_in2 = swarped_tf2[[nlayers+1]],
                                                  X = X,
                                                  Sobs_tf = Sobs_tf,
-                                                 l_tf_1 = l_tf_1, l_tf_2 = l_tf_2, , l_tf_12 = l_tf_12,
+                                                 l_tf_1 = l_tf_1, l_tf_2 = l_tf_2, l_tf_12 = l_tf_12,
                                                  sigma2_tf_1 = sigma2_tf_1, sigma2_tf_2 = sigma2_tf_2, sigma2_tf_12 = sigma2_tf_12,
                                                  nu_tf_1 = nu_tf_1, nu_tf_2 = nu_tf_2, nu_tf_12 = nu_tf_12,
                                                  z_tf = z_tf,
@@ -586,7 +586,7 @@ deepspat_multivar <- function(f, data, g = ~ 1, layers_asym = NULL, layers = NUL
                        z_tf_2 = z_tf_2,
                        family = family
                        )
-    class(deepspat.obj) <- "deepspat_multivar"
+    class(deepspat.obj) <- "deepspat_bivar_GP"
     deepspat.obj
   
 }
