@@ -4,9 +4,16 @@
 \alias{deepspat}
 \title{Deep compositional spatial model}
 \usage{
-deepspat(f, data, layers, method = c("VB", "ML"),
-  par_init = initvars(), learn_rates = init_learn_rates(), MC = 10L,
-  nsteps)
+deepspat(
+  f,
+  data,
+  layers,
+  method = c("VB", "ML"),
+  par_init = initvars(),
+  learn_rates = init_learn_rates(),
+  MC = 10L,
+  nsteps
+)
 }
 \arguments{
 \item{f}{formula identifying the dependent variable and the spatial inputs (RHS can only have one or two variables)}

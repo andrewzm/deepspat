@@ -125,5 +125,6 @@ KL_tf <- function(mu1, S1, mu2, S2) {
 #' set_deepspat_seed(1L)
 set_deepspat_seed <- function(seed = 1L) {
   tf$set_random_seed(seed)
+  tf$random$set_random_seed(seed)
   invisible()
 }

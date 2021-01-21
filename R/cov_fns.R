@@ -19,21 +19,25 @@ cov_exp_tf <- function(x1, x2 = x1, sigma2f, alpha) {
   d <- ncol(x1)
   n1 <- nrow(x1)
   n2 <- nrow(x2)
-  D <- tf$constant(matrix(0, n1, n2), name = 'D', dtype = tf$float32)
-
+  square_mat <- tf$cast(tf$math$equal(n1,n2), "float32")
+  Dsquared <- tf$constant(matrix(0, n1, n2), 
+                                 name = 'D', 
+                                 dtype = tf$float32)
+  
   for(i in 1:d) {
     x1i <- x1[, i, drop = FALSE]
     x2i <- x2[, i, drop = FALSE]
     sep <- x1i - tf$transpose(x2i)
-    sep2 <- tf$square(sep)    
-    alphasep2 <- tf$multiply(alpha[1, i, drop = FALSE], sep2)
-    D <- tf$add(D, alphasep2)
+    alphasep <- tf$multiply(alpha[1, i, drop = FALSE], sep)
+    alphasep2 <- tf$square(alphasep)
+    Dsquared <- tf$add(Dsquared, alphasep2)
   }
 
-  D <- D + 1e-30
-  D <- tf$multiply(-1, tf$sqrt(D))
-  K <- tf$multiply(sigma2f, tf$exp(D))
-  return(K)
+  Dsquared <- Dsquared + tf$multiply(square_mat, tf$multiply(1e-30, tf$eye(n1)))
+  D <- tf$sqrt(Dsquared)
+  K <- tf$multiply(sigma2f, tf$exp(-0.5 * D))
+    
+ return(K)
 }
 
 cov_sqexp_tf <- function(x1, x2 = x1, sigma2f, alpha) {
