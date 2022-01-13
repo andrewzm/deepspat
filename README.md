@@ -11,7 +11,7 @@ Deep compositional spatial models are standard spatial covariance models coupled
 Resources
 ---------
 
-A manuscript detailing the theory and implementation in the univariate setting is available [here](https://arxiv.org/abs/1906.02840), while a manuscript detailng the theory and implementation in a multivariate setting will be available shortly. An informal blog post summarising the manuscript concerning the univariate setting is available [here](https://andrewzm.wordpress.com/2019/06/13/deep-compositional-spatial-models/).
+A manuscript detailing the theory and implementation in the univariate setting is available [here](https://doi.org/10.1080/01621459.2021.1887741), while a manuscript detailng the theory and implementation in a multivariate setting is available [here](http://www3.stat.sinica.edu.tw/ss_newpaper/SS-2020-0156_na.pdf). An informal blog post summarising the manuscript concerning the univariate setting is available [here](https://andrewzm.wordpress.com/2019/06/13/deep-compositional-spatial-models/).
 
 Installation Instructions
 -------------------------
@@ -27,5 +27,5 @@ in an `R` console.
 Reproducible Code
 -----------------
 
-Code using this package for reproducing the results shown in the manuscript describing the univariate setting will be available shortly. Code for the results shown in manuscript describing the multivariate setting is available [here](https://github.com/quanvu17/deepspat_multivar).
+Code using this package for reproducing the results shown in the manuscript describing the univariate setting is available in the [supplemental material of our first article](https://www.tandfonline.com/doi/suppl/10.1080/01621459.2021.1887741?scroll=top). Code for the results shown in manuscript describing the multivariate setting is available [here](https://github.com/quanvu17/deepspat_multivar). Please note that you will require R 3.6, TensorFlow 1.13 and Python 3.7.x to reproduce the results.
 
