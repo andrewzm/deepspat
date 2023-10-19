@@ -1,8 +1,8 @@
 Package: deepspat
 Type: Package
 Title: Deep Compositional Spatial Models
-Date: 15 March 2020
-Version: 0.1.2
+Date: 20 October 2023
+Version: 0.2.0
 Author: Andrew Zammit-Mangion and Quan Vu
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
 Description: Deep compositional spatial models are standard spatial covariance
