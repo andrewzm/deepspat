@@ -43,57 +43,39 @@
 #'  \item{"data_scale_mean_tf"}{Empirical mean of the original data as a \code{TensorFlow} object}
 #'  }
 #' @export
-#' @examples
-#' df <- data.frame(s = rnorm(100), z = rnorm(100))
-#' layers <- c(AWU(r = 50, dim = 1L, grad = 200, lims = c(-0.5, 0.5)),
-#'             bisquares1D(r = 50))
-#' \dontrun{d <- deepspat(f = z ~ s - 1, data = df, layers = layers, method = "ML", nsteps = 100L)}
-deepspat <- function(f, data, layers, method = c("VB", "ML"),
+
+deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
                      par_init = initvars(),
                      learn_rates = init_learn_rates(),
                      MC = 10L, nsteps) {
-
+  # f = z ~ s1 + s2 - 1; data = df; layers = layers
+  # method = method; MC = 10L; nsteps = 50L
+  # par_init = initvars(l_top_layer = 0.5); learn_rates = init_learn_rates(eta_mean = 0.01)
+  
   stopifnot(is(f, "formula"))
   stopifnot(is(data, "data.frame"))
   stopifnot(is.list(layers))
-  method = match.arg(method)
+  method = match.arg(method, c("VB", "ML"))
   mmat <- model.matrix(f, data)
-
+  
   s_tf <- tf$constant(mmat, name = "s", dtype = "float32")
-  scalings <- list(scale_lims_tf(s_tf))
-  s_tf <- scale_0_5_tf(s_tf, scalings[[1]]$min, scalings[[1]]$max)
-
-  depvar <- get_depvars(f)
+  scalings <- list(scale_lims_tf(s_tf)) # min and max
+  s_tf <- scale_0_5_tf(s_tf, scalings[[1]]$min, scalings[[1]]$max) # [-0.5, 0.5] rescaling
+  
+  depvar <- get_depvars(f) # return the variable name of the dependent variable. 
   data_scale_mean <- mean(data[[depvar]])
-  z_tf <- tf$constant(as.matrix(data[[depvar]] - data_scale_mean), name = 'z', dtype = 'float32')
+  z_tf <- tf$constant(as.matrix(data[[depvar]] - data_scale_mean), name = 'z', dtype = 'float32') # centered data
   ndata <- nrow(data)
   nlayers <- length(layers)
-
-  ## Measurement-error variance
-  logsigma2y_tf <- tf$Variable(log(par_init$sigma2y), name = "sigma2y", dtype = "float32")
-  #logsigma2y_tf <- tf$Variable(log(var(data[[depvar]] - data_scale_mean)/10), name = "sigma2y", dtype = "float32")
-  sigma2y_tf <- tf$exp(logsigma2y_tf)
-  precy_tf <- tf$reciprocal(sigma2y_tf)
-  Qobs_tf <- tf$multiply(tf$reciprocal(sigma2y_tf), tf$eye(ndata))
-  Sobs_tf <- tf$multiply(sigma2y_tf, tf$eye(ndata))
-
-  ## Prior variance of the weights eta
-  sigma2eta2 <- par_init$sigma2eta_top_layer#var(data[[depvar]] - data_scale_mean)
-  logsigma2eta2_tf <- tf$Variable(log(sigma2eta2), name = "sigma2eta", dtype = "float32")
-  sigma2eta2_tf <- tf$exp(logsigma2eta2_tf)
-
-  ## Length scale of process
-  l <- par_init$l_top_layer
-  logl_tf <- tf$Variable(matrix(log(l)), name = "l", dtype = "float32")
-  l_tf <- tf$exp(logl_tf)
-
+  
+  
+  
   if(method == "ML") {
     ## Do the warping
-    transeta_tf <- eta_tf <- swarped_tf <- list()
-    swarped_tf[[1]] <- s_tf
+    transeta_tf <- list()
     if(nlayers > 1) for(i in 1:(nlayers - 1)) {
       layer_type <- layers[[i]]$name
-
+      
       if(layers[[i]]$fix_weights) {
         transeta_tf[[i]] <- tf$constant(matrix(rep(par_init$transeta_mean_init[[layer_type]], layers[[i]]$r)),
                                         name = paste0("eta", i), dtype = "float32")
@@ -101,182 +83,199 @@ deepspat <- function(f, data, layers, method = c("VB", "ML"),
         transeta_tf[[i]] <- tf$Variable(matrix(rep(par_init$transeta_mean_init[[layer_type]], layers[[i]]$r)),
                                         name = paste0("eta", i), dtype = "float32")
       }
-      eta_tf[[i]] <- layers[[i]]$trans(transeta_tf[[i]]) # ensure positivity for some variables
-
-      swarped_tf[[i + 1]] <- layers[[i]]$f(swarped_tf[[i]], eta_tf[[i]])
-      scalings[[i + 1]] <- scale_lims_tf(swarped_tf[[i + 1]])
-      swarped_tf[[i + 1]] <- scale_0_5_tf(swarped_tf[[i + 1]], scalings[[i + 1]]$min, scalings[[i + 1]]$max)
     }
-  } else if(method == "VB") {
-    transeta_tf <- eta_tf <- logSH_tf <-
-      MH_tf <- SH_tf <- Wsamp_tf <- swarped_tf <- KLs <- list()
-    swarped_tf[[1]] <- tf$reshape(s_tf, c(1L, ndata, ncol(s_tf))) %>%
-      tf$tile(c(MC, 1L, 1L))
-    transeta_mean_init <- par_init$transeta_mean_init
-    transeta_sd_init <- par_init$transeta_sd_init
-    transeta_mean_prior <- par_init$transeta_mean_prior
-    transeta_sd_prior <- par_init$transeta_sd_prior
-
-    if(nlayers > 1) for(i in 1:(nlayers - 1)) {
-      layer_type <- layers[[i]]$name
-
-      Wsamp_tf[[i]] <- tf$random_normal(c(MC, layers[[i]]$r, 1L),
-                                        name = paste0("samp_eta"), dtype = "float32")
-
-      if(layers[[i]]$fix_weights) {
-        MH_tf[[i]] <- tf$constant(array(transeta_mean_init[[layer_type]],
-                                        dim = c(layers[[i]]$r, 1)),
-                                  name = paste0("mean_eta", i), dtype = "float32")
-        logSH_tf[[i]] <- tf$constant(array(log(transeta_sd_init[[layer_type]]),
-                                           dim = c(layers[[i]]$r, 1)), name = paste0("sd_eta", i), dtype = "float32")
-        SH_tf[[i]] <- tf$constant(array(0, dim = c(layers[[i]]$r, 1)), name = paste0("sd_eta", i), dtype = "float32")
-      } else {
-        MH_tf[[i]] <- tf$Variable(array(transeta_mean_init[[layer_type]],
-                                        dim = c(layers[[i]]$r, 1)),
-                                  name = paste0("mean_eta", i), dtype = "float32")
-        logSH_tf[[i]] <- tf$Variable(array(log(transeta_sd_init[[layer_type]]),
-                                           dim = c(layers[[i]]$r, 1)), name = paste0("sd_eta", i), dtype = "float32")
-        SH_tf[[i]] <- tf$exp(logSH_tf[[i]])
-      }
-
-      MH_tf_tiled <- tf$reshape(MH_tf[[i]], c(1L, layers[[i]]$r, 1L)) %>%
-        tf$tile(c(MC, 1L, 1L))
-
-      SH_tf_tiled <- tf$reshape(SH_tf[[i]], c(1L, layers[[i]]$r, 1L)) %>%
-        tf$tile(c(MC, 1L, 1L))
-
-      transeta_tf[[i]] <- MH_tf_tiled + tf$multiply(SH_tf_tiled, Wsamp_tf[[i]])
-      eta_tf[[i]] <- layers[[i]]$trans(transeta_tf[[i]])
-
-      swarped_tf[[i + 1]] <- layers[[i]]$fMC(swarped_tf[[i]], eta_tf[[i]])
-      scalings[[i + 1]] <- scale_lims_tf(swarped_tf[[i + 1]])
-      swarped_tf[[i + 1]] <- scale_0_5_tf(swarped_tf[[i + 1]], scalings[[i + 1]]$min, scalings[[i + 1]]$max)
-
-
-      if(layers[[i]]$fix_weights) {
-        KLs[[i]] <- tf$constant(0, dtype = "float32")
-      } else {
-        muq <- MH_tf[[i]]
-        Sq <- tf$diag(tf$square(SH_tf[[i]][,1]))
-        mup <- tf$constant(array(transeta_mean_prior[[layer_type]],
-                                 dim = c(layers[[i]]$r, 1)),
-                           name = paste0("prior_mean_eta", i), dtype = "float32")
-        Sp <- tf$constant(array(transeta_sd_prior[[layer_type]]^2,
-                                dim = c(layers[[i]]$r)),
-                          name = paste0("prior_var_eta", i), dtype = "float32") %>%
-          tf$diag()
-        KLs[[i]] <- KL_tf(muq, Sq, mup, Sp)
-        #KLs[[i]] <- tf$constant(0, dtype = "float32")
-      }
-    }
-  }
-
+    
+  } else if(method == "VB") {print("Not adapted yet.")}
+  
+  
+  
   ## Estimate hyperpriors (mean and variance)
   ## Estimate hyperpriors (mean and variance)
   ## Use a linear model of the basis functions to initialise?
-
+  
+  ## Measurement-error variance
+  logsigma2y_tf <- tf$Variable(log(par_init$sigma2y), name = "sigma2y", dtype = "float32")
+  # sigma2y_tf <- tf$exp(logsigma2y_tf)
+  # precy_tf <- tf$math$reciprocal(sigma2y_tf) # precision of independent variables 
+  
+  
+  ## Prior variance of the weights eta ?
+  sigma2eta2 <- par_init$sigma2eta_top_layer#var(data[[depvar]] - data_scale_mean)
+  logsigma2eta2_tf <- tf$Variable(log(sigma2eta2), name = "sigma2eta", dtype = "float32")
+  # sigma2eta2_tf <- tf$exp(logsigma2eta2_tf)
+  
+  ## Length scale of process
+  l <- par_init$l_top_layer
+  logl_tf <- tf$Variable(matrix(log(l)), name = "l", dtype = "float32")
+  # l_tf <- tf$exp(logl_tf)
+  
   ## Prior stuff
-  Seta_tf <- cov_exp_tf(layers[[nlayers]]$knots_tf,
-                        sigma2f = sigma2eta2_tf,
-                        alpha = tf$tile(1 / l_tf, c(1L, 2L)))
-  cholSeta_tf <- tf$cholesky_upper(Seta_tf)
-  Qeta_tf <- chol2inv_tf(cholSeta_tf)
-
-  ##############################################################
-  ##Training
-  if(method == "ML") {
-    NMLL <- logmarglik2(s_in = swarped_tf[[nlayers]],
-                        outlayer = layers[[nlayers]],
-                        prec_obs = precy_tf,
-                        Seta_tf = Seta_tf,
-                        Qeta_tf = Qeta_tf,
-                        z_tf,
-                        ndata = ndata)
-    Cost <- NMLL$Cost
-  } else if(method == "VB"){
-    Qeta_tf <- tf$reshape(Qeta_tf, c(1L, layers[[nlayers]]$r, layers[[nlayers]]$r)) %>%
-      tf$tile(c(MC, 1L, 1L))
-    z_tf_tile <- tf$reshape(z_tf, c(1L, ndata, 1L)) %>%
-      tf$tile(c(MC, 1L, 1L))
-    NMLL <- logmarglik2(s_in = swarped_tf[[nlayers]],
-                        outlayer = layers[[nlayers]],
-                        prec_obs = precy_tf,
-                        Seta_tf = Seta_tf,
-                        Qeta_tf = Qeta_tf,
-                        z_tf_tile,
-                        ndata = ndata)
-    Cost <- tf$divide(tf$reduce_sum(NMLL$Cost),
-                      tf$constant(MC, dtype = "float32")) + tf$reduce_sum(KLs)
+  # Seta_tf <- cov_exp_tf(layers[[nlayers]]$knots_tf,
+  #                       sigma2f = sigma2eta2_tf,
+  #                       alpha = tf$tile(1 / l_tf, c(1L, 2L)))
+  # cholSeta_tf <- tf$cholesky_upper(Seta_tf)
+  # Qeta_tf <- chol2inv_tf(cholSeta_tf)
+  
+  ###############################################################################################
+  Cost_fn = function() {
+    NMLL <- logmarglik2(logsigma2y_tf = logsigma2y_tf,
+                        logl_tf = logl_tf,
+                        logsigma2eta2_tf = logsigma2eta2_tf,
+                        transeta_tf = transeta_tf,
+                        a_tf = a_tf,
+                        # transeta_tf.notLFTidx = transeta_tf[notLFTidx],
+                        # transeta_tf.LFTidx = transeta_tf[LFTidx],
+                        # s_in = swarped_tf[[nlayers]], # latest warped sites
+                        outlayer = layers[[nlayers]], # last layer, bisquares2D
+                        # layers = layers,
+                        # prec_obs = precy_tf,          # precision, measurement error
+                        # Seta_tf = Seta_tf,            # exp cov matrix
+                        # Qeta_tf = Qeta_tf,            # inv cov matrix
+                        scalings = scalings,
+                        s_tf = s_tf, 
+                        z_tf = z_tf,                    # z_tf: dependent variables with zero mean
+                        ndata = ndata)                  # ndata: num of pieces of data
+    NMLL$Cost
   }
-
-
-  ## Optimisers for top layer
-  trains2y = (tf$train$GradientDescentOptimizer(learn_rates$sigma2y))$minimize(Cost, var_list = logsigma2y_tf)
-  traincovfun = (tf$train$AdamOptimizer(learn_rates$covfun))$minimize(Cost, var_list = list(logl_tf, logsigma2eta2_tf))
-
-  ## Optimisers for eta (all hidden layers except LFT)
+  
+  
+  trains2y = function(loss_fn, var_list) 
+    train_step(loss_fn, var_list, tf$optimizers$SGD(learn_rates$sigma2y))
+  traincovfun = function(loss_fn, var_list) 
+    train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$covfun))
+  # trains2y = (tf$optimizers$SGD(learn_rates$sigma2y))$minimize
+  # traincovfun = (tf$optimizers$Adam(learn_rates$covfun))$minimize
+  
   nLFTlayers <- sum(sapply(layers, function(l) l$name) == "LFT")
   LFTidx <- which(sapply(layers, function(l) l$name) == "LFT")
   notLFTidx <- setdiff(1:(nlayers - 1), LFTidx)
+  
   opt_eta <- (nlayers > 1) & (nLFTlayers < nlayers - 1)
-  if(opt_eta)
+  if(opt_eta){
     if(method == "ML") {
-      traineta_mean = (tf$train$AdamOptimizer(learn_rates$eta_mean))$minimize(Cost, var_list = transeta_tf[notLFTidx])
+      traineta_mean = function(loss_fn, var_list) 
+        train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$eta_mean))
+      # traineta_mean = (tf$optimizers$Adam(learn_rates$eta_mean))$minimize
     } else if(method == "VB"){
-      traineta_mean = (tf$train$AdamOptimizer(learn_rates$eta_mean))$minimize(Cost, var_list = MH_tf[notLFTidx])
-      traineta_sd = (tf$train$AdamOptimizer(learn_rates$eta_sd))$minimize(Cost, var_list = logSH_tf[notLFTidx])
+      traineta_mean = function(loss_fn, var_list) 
+        train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$eta_mean))
+      traineta_sd = function(loss_fn, var_list) 
+        train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$eta_sd))
+      # traineta_mean = (tf$optimizers$Adam(learn_rates$eta_mean))$minimize
+      # traineta_sd = (tf$optimizers$Adam(learn_rates$eta_sd))$minimize
     }
-
-  if(nLFTlayers > 0) {
-    trainLFTpars <- (tf$train$AdamOptimizer(learn_rates$LFTpars))$minimize(Cost, var_list = lapply(layers[LFTidx], function(l) l$pars))
   }
-
-  init <- tf$global_variables_initializer()
-  run <- tf$Session()$run
-  run(init)
+  
+  if(nLFTlayers > 0) {
+    a_tf = layers[[LFTidx]]$pars
+    trainLFTpars = function(loss_fn, var_list) 
+      train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$LFTpars))
+    # trainLFTpars <- (tf$optimizers$Adam(learn_rates$LFTpars))$minimize
+  } else {a_tf = NA}
+  
   Objective <- rep(0, nsteps*2)
-
+  
   if(method == "ML") {
     negcostname <- "Likelihood"
   } else if(method == "VB"){
     negcostname <- "Lower-bound"
   }
+  
+  # # -------------------------------------------------------------
 
+  ## ML: trains2y, traincovfun, traineta_mean, trainLFTpars
+  # 400 ite for traineta_mean, trainLFTpars 
   cat("Learning weight parameters... \n")
   for(i in 1:nsteps) {
-    if(opt_eta) run(traineta_mean)
-    if(nLFTlayers > 0) run(trainLFTpars)
-    thisML <- -run(Cost)
-    if((i %% 10) == 0)
+    if(opt_eta & method == "ML") {traineta_mean(Cost_fn, var_list = transeta_tf[notLFTidx])}
+    if(opt_eta & method == "VB") {traineta_mean(Cost_fn, var_list = MH_tf[notLFTidx])}
+    if(nLFTlayers > 0) { trainLFTpars(Cost_fn, var_list = a_tf) }
+    thisML <- -Cost_fn()
+    if((i %% 10) == 0){
+      # cat(paste0("-----------------------------------\n", 
+      #            "Step ", i, " ... AWU1: ", paste(round(as.numeric(exp(transeta_tf[notLFTidx][[1]])), 1), collapse = ","), "\n"))
+      # cat(paste0("Step ", i, " ... AWU2: ", paste(round(as.numeric(exp(transeta_tf[notLFTidx][[2]])), 1), collapse = ","), "\n"))
+      # RBFweights = round(as.numeric(sapply(3:11, function(i) as.numeric(-1+(1+exp(1.5)/2)*tf$sigmoid(transeta_tf[notLFTidx][[i]])))), 2)
+      # cat(paste0("Step ", i, " ... RBF: ", paste(RBFweights, collapse = ","), "\n"))
+      # cat(paste0("Step ", i, "... LFT: ", 
+      #            paste(round(sapply(1:8, function(j) as.numeric(a_tf[[j]])), 2), collapse = ","), "\n"))
       cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
-    Objective[i] <- thisML
+    }
+    Objective[i] <- as.numeric(thisML)
   }
-
+  
+  # 400 ite for trainLFTpars, trains2y, traincovfun
   cat("Measurement-error variance and cov. fn. parameters... \n")
   for(i in (nsteps + 1):(2 * nsteps)) {
-    if(opt_eta & method == "VB") run(traineta_sd)
-    if(nLFTlayers > 0) run(trainLFTpars)
-    run(trains2y)
-    run(traincovfun)
-    thisML <- -run(Cost)
-    if((i %% 10) == 0)
-      cat(paste("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
-    Objective[i] <- thisML
+    if(opt_eta & method == "VB") {traineta_sd(Cost_fn, var_list = logSH_tf[notLFTidx])} # VB
+    if(nLFTlayers > 0) { trainLFTpars(Cost_fn, var_list = a_tf) }
+    trains2y(Cost_fn, var_list = c(logsigma2y_tf))
+    traincovfun(Cost_fn, var_list = c(logl_tf, logsigma2eta2_tf)) 
+    thisML <- -Cost_fn()
+    if((i %% 10) == 0) {
+      # cat(paste0("Step ", i, "... LFT: ", 
+      #            paste(round(sapply(1:8, function(j) as.numeric(a_tf[[j]])), 2), collapse = ","), "\n"))
+      cat(paste("Step ", i, " ... ", negcostname, ": ", thisML, "\n")) }
+    Objective[i] <- as.numeric(thisML)
   }
-
+  
+  # 400 ite for traineta_mean, trainLFTpars, trains2y, traincovfun
   cat("Updating everything... \n")
   for(i in (2*nsteps + 1):(3 * nsteps)) {
-    if(opt_eta) run(traineta_mean)
-    if(opt_eta & method == "VB") run(traineta_sd)
-    if(nLFTlayers > 0) run(trainLFTpars)
-    run(trains2y)
-    run(traincovfun)
-    thisML <- -run(Cost)
-    if((i %% 10) == 0)
-      cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
-    Objective[i] <- thisML
+    if(opt_eta & method == "ML") {traineta_mean(Cost_fn, var_list = transeta_tf[notLFTidx])}
+    if(opt_eta & method == "VB") {
+      traineta_mean(Cost_fn, var_list = MH_tf[notLFTidx])
+      traineta_sd(Cost_fn, var_list = logSH_tf[notLFTidx])}
+    if(nLFTlayers > 0) { trainLFTpars(Cost_fn, var_list = a_tf) }
+    trains2y(Cost_fn, var_list = c(logsigma2y_tf))
+    traincovfun(Cost_fn, var_list = c(logl_tf, logsigma2eta2_tf)) 
+    thisML <- -Cost_fn()
+    if((i %% 10) == 0) {
+      # cat(paste0("-----------------------------------\n", 
+      #            "Step ", i, " ... AWU1: ", paste(round(as.numeric(exp(transeta_tf[notLFTidx][[1]])), 1), collapse = ","), "\n"))
+      # cat(paste0("Step ", i, " ... AWU2: ", paste(round(as.numeric(exp(transeta_tf[notLFTidx][[2]])), 1), collapse = ","), "\n"))
+      # RBFweights = round(as.numeric(sapply(3:11, function(i) as.numeric(-1+(1+exp(1.5)/2)*tf$sigmoid(transeta_tf[notLFTidx][[i]])))), 2)
+      # cat(paste0("Step ", i, " ... RBF: ", paste(RBFweights, collapse = ","), "\n"))
+      # cat(paste0("Step ", i, "... LFT: ", 
+      #            paste(round(sapply(1:8, function(j) as.numeric(a_tf[[j]])), 2), collapse = ","), "\n"))
+      cat(paste("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
+    }
+    Objective[i] <- as.numeric(thisML)
   }
+  
+  # ###############################################################################################
+  eta_tf <- swarped_tf <- list()
+  swarped_tf[[1]] <- s_tf
+  if(nlayers > 1) for(i in 1:(nlayers - 1)) {
+    if (layers[[i]]$name == "LFT") {
+      a_inum_tf = layers[[i]]$trans(a_tf)
+      swarped_tf[[i + 1]] <- layers[[i]]$f(swarped_tf[[i]], a_inum_tf)
+    } else { 
+      eta_tf[[i]] <- layers[[i]]$trans(transeta_tf[[i]]) # ensure positivity for some variables
+      swarped_tf[[i + 1]] <- layers[[i]]$f(swarped_tf[[i]], eta_tf[[i]]) 
+      }
+  scalings[[i + 1]] <- scale_lims_tf(swarped_tf[[i + 1]])
+  swarped_tf[[i + 1]] <- scale_0_5_tf(swarped_tf[[i + 1]], scalings[[i + 1]]$min, scalings[[i + 1]]$max)
+  } 
 
+  sigma2y_tf <- tf$exp(logsigma2y_tf)
+  precy_tf <- tf$math$reciprocal(sigma2y_tf)
+  
+  sigma2eta2_tf <- tf$exp(logsigma2eta2_tf)
+  l_tf <- tf$exp(logl_tf)
+  
+  NMLL <- logmarglik2(logsigma2y_tf = logsigma2y_tf,
+                      logl_tf = logl_tf,
+                      logsigma2eta2_tf = logsigma2eta2_tf,
+                      transeta_tf = transeta_tf,
+                      a_tf = a_tf,
+                      outlayer = layers[[nlayers]],
+                      scalings = scalings,
+                      s_tf = s_tf, 
+                      z_tf = z_tf,
+                      ndata = ndata)
+  
+  
   deepspat.obj <- list(layers = layers,
                        Cost = NMLL$Cost,
                        mupost_tf = NMLL$mupost_tf,
@@ -285,17 +284,18 @@ deepspat <- function(f, data, layers, method = c("VB", "ML"),
                        precy_tf = precy_tf,
                        sigma2eta_tf = sigma2eta2_tf,
                        l_tf = l_tf,
+                       a_tf = a_tf,
                        scalings = scalings,
                        method = method,
                        nlayers = nlayers,
                        MC = MC,
-                       run = run,
+                       # run = run,
                        f = f,
                        data = data,
                        negcost = Objective,
                        data_scale_mean = data_scale_mean,
                        data_scale_mean_tf = tf$constant(data_scale_mean, dtype = "float32"))
-
+  
   class(deepspat.obj) <- "deepspat"
   deepspat.obj
 }

@@ -4,7 +4,7 @@
 \alias{bisquares2D}
 \title{Bisquare functions on a 2D domain}
 \usage{
-bisquares2D(r = 30, lims = c(-0.5, 0.5))
+bisquares2D(r = 30, lims = c(-0.5, 0.5), dtype = "float32")
 }
 \arguments{
 \item{r}{30}
@@ -25,7 +25,4 @@ bisquares2D(r = 30, lims = c(-0.5, 0.5))
 Sets up a top-layer set of bisquare basis functions on a square 2D domain of
 size 1 x 1 for modelling the process \eqn{Y}. It returns a list of length 1 containing the basis functions and encapsulated
 functions that evaluate the bisquare functions over inputs of different types. See Value for more details.
-}
-\examples{
-layer <- bisquares2D(r = 30, lims = c(-0.5, 0.5))
 }

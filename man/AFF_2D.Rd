@@ -4,7 +4,7 @@
 \alias{AFF_2D}
 \title{Affine transformation on a 2D domain}
 \usage{
-AFF_2D(a = c(0, 1, 0, 0, 0, 1))
+AFF_2D(a = c(0, 1, 0, 0, 0, 1), dtype = "float32")
 }
 \arguments{
 \item{a}{vector of six real numbers describing an affine transformation on a 2D domain}
@@ -23,7 +23,4 @@ AFF_2D(a = c(0, 1, 0, 0, 0, 1))
 }
 \description{
 Sets up an affine transformation on a 2D domain
-}
-\examples{
-layer <- AFF_2D()
 }

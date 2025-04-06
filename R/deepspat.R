@@ -1,17 +1,3 @@
-## Copyright 2019 Andrew Zammit Mangion
-##
-## Licensed under the Apache License, Version 2.0 (the "License");
-## you may not use this file except in compliance with the License.
-## You may obtain a copy of the License at
-##
-## http://www.apache.org/licenses/LICENSE-2.0
-##
-## Unless required by applicable law or agreed to in writing, software
-## distributed under the License is distributed on an "AS IS" BASIS,
-## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-## See the License for the specific language governing permissions and
-## limitations under the License.
-
 #' Deep compositional spatial models
 #'
 #' Deep compositional spatial models are standard low-rank spatial models coupled with a bijective warping function of the spatial domain.
@@ -27,5 +13,6 @@
 #' @import tensorflow
 #' @importFrom data.table rbindlist
 #' @importFrom methods is
-#' @importFrom stats dist model.matrix qnorm rnorm runif terms var
-NULL
+#' @importFrom dplyr %>%
+#' @importFrom stats dist model.matrix var qnorm pnorm runif terms update quantile
+#' @importFrom utils str

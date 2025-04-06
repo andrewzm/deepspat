@@ -1,9 +1,9 @@
 Package: deepspat
 Type: Package
 Title: Deep Compositional Spatial Models
-Date: 20 October 2023
-Version: 0.2.0
-Author: Andrew Zammit-Mangion and Quan Vu
+Date: April 2025
+Version: 0.3.0
+Author: Andrew Zammit-Mangion and Quan Vu and Xuanjie Shao
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
 Description: Deep compositional spatial models are standard spatial covariance
              models coupled with an injective warping function of the spatial 
@@ -16,14 +16,8 @@ Description: Deep compositional spatial models are standard spatial covariance
 	     Estimation and inference is done using TensorFlow, which makes use of 
              graphics processing units. 
 License: Apache License 2.0
-Imports: 
-    data.table,
-    dplyr,
-    Matrix,
-    methods,
-    reticulate,
-    tensorflow
+Imports: data.table, dplyr, Matrix, methods, reticulate, tensorflow
 SystemRequirements: TensorFlow (https://www.tensorflow.org/),
 Encoding: UTF-8
-LazyData: true
-RoxygenNote: 7.1.1
+RoxygenNote: 7.3.2
+NeedsCompilation: no

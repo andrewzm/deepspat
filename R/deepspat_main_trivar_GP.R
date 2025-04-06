@@ -62,28 +62,31 @@
 #'  \item{"family"}{Family of the model}
 #'  }
 #' @export
-#' @examples
-#' df <- data.frame(s1 = rnorm(100), s2 = rnorm(100), z1 = rnorm(100), z2 = rnorm(100))
-#' layers <- c(AWU(r = 50, dim = 1L, grad = 200, lims = c(-0.5, 0.5)))
-#' \dontrun{d <- deepspat_bivar_GP(f = z1 + z2 ~ s1 + s2 - 1,
-#'                                 data = df, g = ~ 1,
-#'                                 layers = layers, method = "REML",
-#'                                 family = "matern_nonstat_symm",
-#'                                 nsteps = 100L)}
-deepspat_trivar_GP <- function(f, data, g = ~ 1, layers_asym_2 = NULL, layers_asym_3 = NULL, layers = NULL,
-                              method = c("REML"),
-                              family = c("matern_stat_symm",
-                                         "matern_stat_asymm",
-                                         "matern_nonstat_symm",
-                                         "matern_nonstat_asymm"),
-                              par_init = initvars(),
-                              learn_rates = init_learn_rates(),
-                              nsteps = 150L) {
+
+deepspat_trivar_GP <- function(f, data, g = ~ 1, 
+                               layers_asym_2 = NULL, layers_asym_3 = NULL, layers = NULL,
+                               method = c("REML"),
+                               family = c("matern_stat_symm",
+                                          "matern_stat_asymm",
+                                          "matern_nonstat_symm",
+                                          "matern_nonstat_asymm"),
+                               par_init = initvars(),
+                               learn_rates = init_learn_rates(),
+                               nsteps = 150L) {
+                              
+  # f = z1 + z2 + z3 ~ s1 + s2 - 1; data = obsdata; g = ~ 1
+  # method = "REML"; nsteps = 150L
+  # par_init = initvars(l_top_layer = 0.5)
+  # learn_rates = init_learn_rates(eta_mean = 0.01, LFTpars = 0.01)
+  # layers_asym_2 = NULL; layers_asym_3 = NULL
+  # family = "matern_nonstat_symm"
+
   
   stopifnot(is(f, "formula"))
   stopifnot(is(data, "data.frame"))
-  method = match.arg(method)
-  family = match.arg(family)
+  method = match.arg(method, c("REML"))
+  family = match.arg(family, c("matern_stat_symm", "matern_stat_asymm", 
+                               "matern_nonstat_symm", "matern_nonstat_asymm"))
   mmat <- model.matrix(f, data)
   X1 <- model.matrix(g, data)
   matrix0 <- matrix(rep(0, ncol(X1)* nrow(X1)), ncol=ncol(X1))
@@ -107,32 +110,6 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1, layers_asym_2 = NULL, layers_as
   logsigma2y_tf_2 <- tf$Variable(log(par_init$sigma2y), name = "sigma2y_2", dtype = "float32")
   logsigma2y_tf_3 <- tf$Variable(log(par_init$sigma2y), name = "sigma2y_3", dtype = "float32")
   
-  sigma2y_tf_1 <- tf$exp(logsigma2y_tf_1)
-  sigma2y_tf_2 <- tf$exp(logsigma2y_tf_2)
-  sigma2y_tf_3 <- tf$exp(logsigma2y_tf_3)
-  
-  precy_tf_1 <- tf$reciprocal(sigma2y_tf_1)
-  precy_tf_2 <- tf$reciprocal(sigma2y_tf_2)
-  precy_tf_3 <- tf$reciprocal(sigma2y_tf_3)
-  
-  Qobs_tf_1 <- tf$multiply(tf$reciprocal(sigma2y_tf_1), tf$eye(ndata))
-  Qobs_tf_2 <- tf$multiply(tf$reciprocal(sigma2y_tf_2), tf$eye(ndata))
-  Qobs_tf_3 <- tf$multiply(tf$reciprocal(sigma2y_tf_3), tf$eye(ndata))
-  
-  Sobs_tf_1 <- tf$multiply(sigma2y_tf_1, tf$eye(ndata))
-  Sobs_tf_2 <- tf$multiply(sigma2y_tf_2, tf$eye(ndata))
-  Sobs_tf_3 <- tf$multiply(sigma2y_tf_3, tf$eye(ndata))
-  
-  Mat_zero <- tf$zeros(shape=c(ndata,ndata), dtype=tf$float32)
-  
-  Qobs_tf <- tf$concat(list(tf$concat(list(Qobs_tf_1, Mat_zero, Mat_zero), axis=1L),
-                            tf$concat(list(Mat_zero, Qobs_tf_2, Mat_zero), axis=1L),
-                            tf$concat(list(Mat_zero, Mat_zero, Qobs_tf_3), axis=1L)), axis=0L)
-  
-  Sobs_tf <- tf$concat(list(tf$concat(list(Sobs_tf_1, Mat_zero, Mat_zero), axis=1L),
-                            tf$concat(list(Mat_zero, Sobs_tf_2, Mat_zero), axis=1L),
-                            tf$concat(list(Mat_zero, Mat_zero, Sobs_tf_3), axis=1L)), axis=0L)
-  
   ## Prior variance of the process
   sigma2_1 <- var(data[[depvar1]])
   sigma2_2 <- var(data[[depvar2]])
@@ -142,30 +119,16 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1, layers_asym_2 = NULL, layers_as
   logsigma2_tf_2 <- tf$Variable(log(sigma2_2), name = "sigma2eta_2", dtype = "float32")
   logsigma2_tf_3 <- tf$Variable(log(sigma2_3), name = "sigma2eta_3", dtype = "float32")
   
-  sigma2_tf_1 <- tf$exp(logsigma2_tf_1)
-  sigma2_tf_2 <- tf$exp(logsigma2_tf_2)
-  sigma2_tf_3 <- tf$exp(logsigma2_tf_3)
-  
   ## Length scale of process
   l <- par_init$l_top_layer
   logl_tf <-tf$Variable(matrix(log(l)), name = "l", dtype = "float32")
-  l_tf_1 <- tf$exp(logl_tf)
-  l_tf_2 <- l_tf_3 <- l_tf_12 <- l_tf_13 <- l_tf_23 <- l_tf_1
   
   ## Smoothness of the process
-  normal <- tf$distributions$Normal(loc=0, scale=1)
+  normal <- tfp$distributions$Normal(loc=0, scale=1)
   nu_init <- par_init$nu
   cdf_nu_tf_1 <- tf$Variable(qnorm(nu_init/3.5), name="nu", dtype="float32")
   cdf_nu_tf_2 <- tf$Variable(qnorm(nu_init/3.5), name="nu", dtype="float32")
   cdf_nu_tf_3 <- tf$Variable(qnorm(nu_init/3.5), name="nu", dtype="float32")
-  
-  nu_tf_1 <-  3.5*normal$cdf(cdf_nu_tf_1) 
-  nu_tf_2 <-  3.5*normal$cdf(cdf_nu_tf_2)
-  nu_tf_3 <-  3.5*normal$cdf(cdf_nu_tf_3)
-  
-  nu_tf_12 <- (nu_tf_1 + nu_tf_2)/2
-  nu_tf_13 <- (nu_tf_1 + nu_tf_3)/2
-  nu_tf_23 <- (nu_tf_2 + nu_tf_3)/2
   
   ## Correlation parameter
   
@@ -173,47 +136,46 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1, layers_asym_2 = NULL, layers_as
   r_b <- tf$Variable(0, name="r_b", dtype="float32")
   r_c <- tf$Variable(0, name="r_c", dtype="float32")
   
-  r_12 <- tf$divide(r_a, tf$sqrt(tf$square(r_a) + 1))
-  r_13 <- tf$divide(r_b, tf$sqrt(tf$square(r_b) + tf$square(r_c) + 1))
-  r_23 <- tf$divide(r_a, tf$sqrt(tf$square(r_a) + 1)) * tf$divide(r_b, tf$sqrt(tf$square(r_b) + tf$square(r_c) + 1)) + tf$divide(1, tf$sqrt(tf$square(r_a) + 1)) * tf$divide(r_c, tf$sqrt(tf$square(r_b) + tf$square(r_c) + 1))
-  
-  rho_tf_12 <- tf$divide(r_12 * tf$sqrt(nu_tf_1) * tf$sqrt(nu_tf_2), nu_tf_12)
-  rho_tf_13 <- tf$divide(r_13 * tf$sqrt(nu_tf_1) * tf$sqrt(nu_tf_3), nu_tf_13)
-  rho_tf_23 <- tf$divide(r_23 * tf$sqrt(nu_tf_2) * tf$sqrt(nu_tf_3), nu_tf_23)
-  
-  sigma2_tf_12 <- rho_tf_12 * tf$sqrt(sigma2_tf_1) * tf$sqrt(sigma2_tf_2)
-  sigma2_tf_13 <- rho_tf_13 * tf$sqrt(sigma2_tf_1) * tf$sqrt(sigma2_tf_3)
-  sigma2_tf_23 <- rho_tf_23 * tf$sqrt(sigma2_tf_2) * tf$sqrt(sigma2_tf_3)
-  
   if (family == "matern_stat_symm"){
     
     ##############################################################
     ##Training
     if(method == "REML") {
-      NMLL <- logmarglik_GP_trivar_matern_reml(s_in = s_tf,
-                                               X = X,
-                                               Sobs_tf = Sobs_tf,
-                                               l_tf_1 = l_tf_1, l_tf_2 = l_tf_2, l_tf_3 = l_tf_3,
-                                               l_tf_12 = l_tf_12, l_tf_13 = l_tf_13, l_tf_23 = l_tf_23,
-                                               sigma2_tf_1 = sigma2_tf_1, sigma2_tf_2 = sigma2_tf_2, sigma2_tf_3 = sigma2_tf_3,
-                                               sigma2_tf_12 = sigma2_tf_12, sigma2_tf_13 = sigma2_tf_13, sigma2_tf_23 = sigma2_tf_23,
-                                               nu_tf_1 = nu_tf_1, nu_tf_2 = nu_tf_2, nu_tf_3 = nu_tf_3,
-                                               nu_tf_12 = nu_tf_12, nu_tf_13 = nu_tf_13, nu_tf_23 = nu_tf_23,
-                                               z_tf = z_tf,
-                                               ndata = ndata)
-      Cost <- NMLL$Cost
+      Cost_fn = function() {
+        NMLL <- logmarglik_GP_trivar_matern_reml(s_tf = s_tf,
+                                                 X = X,
+                                                 logsigma2y_tf_1 = logsigma2y_tf_1, 
+                                                 logsigma2y_tf_2 = logsigma2y_tf_2, 
+                                                 logsigma2y_tf_3 = logsigma2y_tf_3,
+                                                 logl_tf = logl_tf, 
+                                                 cdf_nu_tf_1 = cdf_nu_tf_1, 
+                                                 cdf_nu_tf_2 = cdf_nu_tf_2, 
+                                                 cdf_nu_tf_3 = cdf_nu_tf_3, 
+                                                 r_a = r_a, r_b = r_b, r_c = r_c,
+                                                 logsigma2_tf_1 = logsigma2_tf_1, 
+                                                 logsigma2_tf_2 = logsigma2_tf_2, 
+                                                 logsigma2_tf_3 = logsigma2_tf_3,
+                                                 z_tf = z_tf,
+                                                 normal = normal,
+                                                 ndata = ndata,
+                                                 family = family)
+        
+        Cost <- NMLL$Cost
+      }
     } else {
       stop("Only REML is implemented")
     }
     
-    ## Optimisers for top layer
-    trains2y = (tf$train$GradientDescentOptimizer(learn_rates$sigma2y))$minimize(Cost, var_list = list(logsigma2y_tf_1, logsigma2y_tf_2, logsigma2y_tf_3))
-    traincovfun = (tf$train$AdamOptimizer(learn_rates$covfun))$minimize(Cost, var_list = list(logl_tf, cdf_nu_tf_1, cdf_nu_tf_2, cdf_nu_tf_3, r_a, r_b, r_c))
-    trains2eta = (tf$train$AdamOptimizer(learn_rates$sigma2eta))$minimize(Cost, var_list = list(logsigma2_tf_1, logsigma2_tf_2, logsigma2_tf_3))
+    trains2y = function(loss_fn, var_list) 
+      train_step(loss_fn, var_list, tf$optimizers$SGD(learn_rates$sigma2y))
+    traincovfun = function(loss_fn, var_list) 
+      train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$covfun))
+    trains2eta = function(loss_fn, var_list) 
+      train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$sigma2eta))
+    # trains2y = (tf$optimizers$SGD(learn_rates$sigma2y))$minimize
+    # traincovfun = (tf$optimizers$Adam(learn_rates$covfun))$minimize
+    # trains2eta = (tf$optimizers$Adam(learn_rates$sigma2eta))$minimize
     
-    init <- tf$global_variables_initializer()
-    run <- tf$Session()$run
-    run(init)
     Objective <- rep(0, nsteps*2)
     
     if(method == "REML") {
@@ -222,13 +184,13 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1, layers_asym_2 = NULL, layers_as
     
     cat("Measurement-error variance and cov. fn. parameters... \n")
     for(i in 1:(nsteps*2)) {
-      run(trains2y)
-      run(traincovfun)
-      run(trains2eta)
-      thisML <- -run(Cost)
+      trains2y(Cost_fn, var_list = c(logsigma2y_tf_1, logsigma2y_tf_2, logsigma2y_tf_3))
+      traincovfun(Cost_fn, var_list = c(logl_tf, cdf_nu_tf_1, cdf_nu_tf_2, cdf_nu_tf_3, r_a, r_b, r_c))
+      trains2eta(Cost_fn, var_list = c(logsigma2_tf_1, logsigma2_tf_2, logsigma2_tf_3))
+      thisML <- -Cost_fn()
       if((i %% 10) == 0)
         cat(paste("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
-      Objective[i] <- thisML
+      Objective[i] <- as.numeric(thisML)
     }
     
     eta_tf <- NULL
@@ -242,8 +204,27 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1, layers_asym_2 = NULL, layers_as
     swarped_tf2 <- s_tf
     swarped_tf3 <- s_tf
     
+    NMLL <- logmarglik_GP_trivar_matern_reml(s_tf = s_tf,
+                                             X = X,
+                                             logsigma2y_tf_1 = logsigma2y_tf_1, 
+                                             logsigma2y_tf_2 = logsigma2y_tf_2, 
+                                             logsigma2y_tf_3 = logsigma2y_tf_3,
+                                             logl_tf = logl_tf, 
+                                             cdf_nu_tf_1 = cdf_nu_tf_1, 
+                                             cdf_nu_tf_2 = cdf_nu_tf_2, 
+                                             cdf_nu_tf_3 = cdf_nu_tf_3, 
+                                             r_a = r_a, r_b = r_b, r_c = r_c,
+                                             logsigma2_tf_1 = logsigma2_tf_1, 
+                                             logsigma2_tf_2 = logsigma2_tf_2, 
+                                             logsigma2_tf_3 = logsigma2_tf_3,
+                                             z_tf = z_tf,
+                                             normal = normal,
+                                             ndata = ndata,
+                                             family = family)
+    
   }
   
+  ##############################################################
   if (family == "matern_nonstat_symm"){
     stopifnot(is.list(layers))
     nlayers <- length(layers)
@@ -252,8 +233,7 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1, layers_asym_2 = NULL, layers_as
     
     if(method == "REML") {
       ## Do the warping
-      transeta_tf <- eta_tf <- swarped_tf <- list()
-      swarped_tf[[1]] <- s_tf
+      transeta_tf <- list()
       for(i in 1:nlayers) {
         layer_type <- layers[[i]]$name
         
@@ -264,54 +244,73 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1, layers_asym_2 = NULL, layers_as
           transeta_tf[[i]] <- tf$Variable(matrix(rep(par_init$transeta_mean_init[[layer_type]], layers[[i]]$r)),
                                           name = paste0("eta", i), dtype = "float32")
         }
-        eta_tf[[i]] <- layers[[i]]$trans(transeta_tf[[i]]) # ensure positivity for some variables
         
-        swarped_tf[[i + 1]] <- layers[[i]]$f(swarped_tf[[i]], eta_tf[[i]])
-        scalings[[i + 1]] <- scale_lims_tf(swarped_tf[[i + 1]])
-        swarped_tf[[i + 1]] <- scale_0_5_tf(swarped_tf[[i + 1]], scalings[[i + 1]]$min, scalings[[i + 1]]$max)
       }
     } 
     
     ##############################################################
     ##Training
     if(method == "REML") {
-      NMLL <- logmarglik_GP_trivar_matern_reml(s_in = swarped_tf[[nlayers+1]],
-                                               X = X,
-                                               Sobs_tf = Sobs_tf,
-                                               l_tf_1 = l_tf_1, l_tf_2 = l_tf_2, l_tf_3 = l_tf_3,
-                                               l_tf_12 = l_tf_12, l_tf_13 = l_tf_13, l_tf_23 = l_tf_23,
-                                               sigma2_tf_1 = sigma2_tf_1, sigma2_tf_2 = sigma2_tf_2, sigma2_tf_3 = sigma2_tf_3,
-                                               sigma2_tf_12 = sigma2_tf_12, sigma2_tf_13 = sigma2_tf_13, sigma2_tf_23 = sigma2_tf_23,
-                                               nu_tf_1 = nu_tf_1, nu_tf_2 = nu_tf_2, nu_tf_3 = nu_tf_3,
-                                               nu_tf_12 = nu_tf_12, nu_tf_13 = nu_tf_13, nu_tf_23 = nu_tf_23,
-                                               z_tf = z_tf,
-                                               ndata = ndata)
-      Cost <- NMLL$Cost
+      Cost_fn = function() {
+        NMLL <- logmarglik_GP_trivar_matern_reml(s_tf = s_tf, #swarped_tf[[nlayers+1]],
+                                                 X = X,
+                                                 logsigma2y_tf_1 = logsigma2y_tf_1, 
+                                                 logsigma2y_tf_2 = logsigma2y_tf_2, 
+                                                 logsigma2y_tf_3 = logsigma2y_tf_3,
+                                                 logl_tf = logl_tf, 
+                                                 cdf_nu_tf_1 = cdf_nu_tf_1, 
+                                                 cdf_nu_tf_2 = cdf_nu_tf_2, 
+                                                 cdf_nu_tf_3 = cdf_nu_tf_3, 
+                                                 r_a = r_a, r_b = r_b, r_c = r_c,
+                                                 logsigma2_tf_1 = logsigma2_tf_1, 
+                                                 logsigma2_tf_2 = logsigma2_tf_2, 
+                                                 logsigma2_tf_3 = logsigma2_tf_3,
+                                                 z_tf = z_tf,
+                                                 normal = normal,
+                                                 ndata = ndata,
+                                                 family = family,
+                                                 layers = layers,
+                                                 transeta_tf = transeta_tf,
+                                                 a_tf = a_tf,
+                                                 scalings = scalings)
+        NMLL$Cost
+      }
     } else {
       stop("Only REML is implemented")
     }
     
     ## Optimisers for top layer
-    trains2y = (tf$train$GradientDescentOptimizer(learn_rates$sigma2y))$minimize(Cost, var_list = list(logsigma2y_tf_1, logsigma2y_tf_2, logsigma2y_tf_3))
-    traincovfun = (tf$train$AdamOptimizer(learn_rates$covfun))$minimize(Cost, var_list = list(logl_tf, cdf_nu_tf_1, cdf_nu_tf_2, cdf_nu_tf_3, r_a, r_b, r_c))
-    trains2eta = (tf$train$AdamOptimizer(learn_rates$sigma2eta))$minimize(Cost, var_list = list(logsigma2_tf_1, logsigma2_tf_2, logsigma2_tf_3))
+    trains2y = function(loss_fn, var_list) 
+      train_step(loss_fn, var_list, tf$optimizers$SGD(learn_rates$sigma2y))
+    traincovfun = function(loss_fn, var_list) 
+      train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$covfun))
+    trains2eta = function(loss_fn, var_list) 
+      train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$sigma2eta))
+    # trains2y = (tf$optimizers$SGD(learn_rates$sigma2y))$minimize
+    # traincovfun = (tf$optimizers$Adam(learn_rates$covfun))$minimize
+    # trains2eta = (tf$optimizers$Adam(learn_rates$sigma2eta))$minimize
     
     ## Optimisers for eta (all hidden layers except LFT)
     nLFTlayers <- sum(sapply(layers, function(l) l$name) == "LFT")
     LFTidx <- which(sapply(layers, function(l) l$name) == "LFT")
     notLFTidx <- setdiff(1:nlayers, LFTidx)
     opt_eta <- (nlayers > 0) & (nLFTlayers < nlayers)
+    
     if(opt_eta)
       if(method == "REML") {
-        traineta_mean = (tf$train$AdamOptimizer(learn_rates$eta_mean))$minimize(Cost, var_list = transeta_tf[notLFTidx])
+        traineta_mean = function(loss_fn, var_list) 
+          train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$eta_mean))
+        # traineta_mean = (tf$optimizers$Adam(learn_rates$eta_mean))$minimize
       } 
+    
+    a_tf = NULL
     if(nLFTlayers > 0) {
-      trainLFTpars <- (tf$train$AdamOptimizer(learn_rates$LFTpars))$minimize(Cost, var_list = lapply(layers[LFTidx], function(l) l$pars))
+      a_tf = layers[[LFTidx]]$pars
+      trainLFTpars = function(loss_fn, var_list) 
+        train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$LFTpars))
+      # trainLFTpars <- (tf$optimizers$Adam(learn_rates$LFTpars))$minimize
     }
     
-    init <- tf$global_variables_initializer()
-    run <- tf$Session()$run
-    run(init)
     Objective <- rep(0, nsteps*3)
     
     if(method == "REML") {
@@ -320,38 +319,56 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1, layers_asym_2 = NULL, layers_as
     
     cat("Learning weight parameters... \n")
     for(i in 1:nsteps) {
-      if(opt_eta) run(traineta_mean)
-      if(nLFTlayers > 0) run(trainLFTpars)
-      thisML <- -run(Cost)
+      if(opt_eta) traineta_mean(Cost_fn, var_list = transeta_tf[notLFTidx]) #run(traineta_mean)
+      if(nLFTlayers > 0) trainLFTpars(Cost_fn, var_list = a_tf) #run(trainLFTpars)
+      thisML <- -Cost_fn()
       if((i %% 10) == 0)
         cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
-      Objective[i] <- thisML
+      Objective[i] <- as.numeric(thisML)
     }
     
     cat("Measurement-error variance and cov. fn. parameters... \n")
     for(i in (nsteps + 1):(2 * nsteps)) {
-      if(nLFTlayers > 0) run(trainLFTpars)
-      run(trains2y)
-      run(traincovfun)
-      run(trains2eta)
-      thisML <- -run(Cost)
+      if(nLFTlayers > 0) trainLFTpars(Cost_fn, var_list = a_tf)
+      trains2y(Cost_fn, var_list = c(logsigma2y_tf_1, logsigma2y_tf_2, logsigma2y_tf_3))
+      traincovfun(Cost_fn, var_list = c(logl_tf, cdf_nu_tf_1, cdf_nu_tf_2, cdf_nu_tf_3, r_a, r_b, r_c))
+      trains2eta(Cost_fn, var_list = c(logsigma2_tf_1, logsigma2_tf_2, logsigma2_tf_3))
+      thisML <- -Cost_fn()
       if((i %% 10) == 0)
         cat(paste("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
-      Objective[i] <- thisML
+      Objective[i] <- as.numeric(thisML)
     }
     
     cat("Updating everything... \n")
     for(i in (2*nsteps + 1):(3 * nsteps)) {
-      if(opt_eta) run(traineta_mean)
-      if(nLFTlayers > 0) run(trainLFTpars)
-      run(trains2y)
-      run(traincovfun)
-      run(trains2eta)
-      thisML <- -run(Cost)
+      if(opt_eta) traineta_mean(Cost_fn, var_list = transeta_tf[notLFTidx])
+      if(nLFTlayers > 0) trainLFTpars(Cost_fn, var_list = a_tf)
+      trains2y(Cost_fn, var_list = c(logsigma2y_tf_1, logsigma2y_tf_2, logsigma2y_tf_3))
+      traincovfun(Cost_fn, var_list = c(logl_tf, cdf_nu_tf_1, cdf_nu_tf_2, cdf_nu_tf_3, r_a, r_b, r_c))
+      trains2eta(Cost_fn, var_list = c(logsigma2_tf_1, logsigma2_tf_2, logsigma2_tf_3))
+      thisML <- -Cost_fn()
       if((i %% 10) == 0)
         cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
-      Objective[i] <- thisML
+      Objective[i] <- as.numeric(thisML)
     }
+    # -----------------------------------------------
+    
+    eta_tf <- swarped_tf <- list()
+    swarped_tf[[1]] <- s_tf
+    if(nlayers > 1) for(i in 1:nlayers) {
+      # need to adapt this for LFT layer
+      if (layers[[i]]$name == "LFT") {
+        a_inum_tf = layers[[i]]$trans(a_tf)
+        swarped_tf[[i + 1]] <- layers[[i]]$f(swarped_tf[[i]], a_inum_tf)
+      } else { 
+        eta_tf[[i]] <- layers[[i]]$trans(transeta_tf[[i]])
+        swarped_tf[[i + 1]] <- layers[[i]]$f(swarped_tf[[i]], eta_tf[[i]]) 
+      }
+      
+      scalings[[i + 1]] <- scale_lims_tf(swarped_tf[[i + 1]])
+      swarped_tf[[i + 1]] <- scale_0_5_tf(swarped_tf[[i + 1]], scalings[[i + 1]]$min, scalings[[i + 1]]$max)
+    }
+    # swarped_tf <- swarped_tf[[nlayers+1]]
     
     eta_tf_asym_2 <- NULL
     eta_tf_asym_3 <- NULL
@@ -361,8 +378,31 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1, layers_asym_2 = NULL, layers_as
     swarped_tf2 <- swarped_tf[[nlayers+1]]
     swarped_tf3 <- swarped_tf[[nlayers+1]]
     
+    NMLL <- logmarglik_GP_trivar_matern_reml(s_tf = s_tf,#swarped_tf[[nlayers+1]],
+                                             X = X,
+                                             logsigma2y_tf_1 = logsigma2y_tf_1, 
+                                             logsigma2y_tf_2 = logsigma2y_tf_2, 
+                                             logsigma2y_tf_3 = logsigma2y_tf_3,
+                                             logl_tf = logl_tf, 
+                                             cdf_nu_tf_1 = cdf_nu_tf_1, 
+                                             cdf_nu_tf_2 = cdf_nu_tf_2, 
+                                             cdf_nu_tf_3 = cdf_nu_tf_3, 
+                                             r_a = r_a, r_b = r_b, r_c = r_c,
+                                             logsigma2_tf_1 = logsigma2_tf_1, 
+                                             logsigma2_tf_2 = logsigma2_tf_2, 
+                                             logsigma2_tf_3 = logsigma2_tf_3,
+                                             z_tf = z_tf,
+                                             normal = normal,
+                                             ndata = ndata,
+                                             family = family,
+                                             layers = layers,
+                                             transeta_tf = transeta_tf,
+                                             a_tf = a_tf,
+                                             scalings = scalings)
+    
   }
   
+  ##############################################################
   if (family %in% c("matern_stat_asymm", "matern_nonstat_asymm")){
     stopifnot(is.list(layers_asym_2))
     stopifnot(is.list(layers_asym_3))
@@ -374,15 +414,10 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1, layers_asym_2 = NULL, layers_as
     if(method == "REML") {
       ## Do the warping
       
-      transeta_tf_asym_2 <- eta_tf_asym_2 <- transeta_tf_asym_3 <- eta_tf_asym_3 <-
-        swarped_tf1_asym <- swarped_tf2_asym <- swarped_tf3_asym <- list()
-      swarped_tf1_asym[[1]] <- s_tf
-      swarped_tf2_asym[[1]] <- s_tf
-      swarped_tf3_asym[[1]] <- s_tf
+      transeta_tf_asym_2 <- transeta_tf_asym_3 <- list()
       
       for(i in 1:nlayers_asym){
         layer_type <- layers_asym_2[[i]]$name
-        
         if(layers_asym_2[[i]]$fix_weights) {
           transeta_tf_asym_2[[i]] <- tf$constant(matrix(rep(par_init$transeta_mean_init[[layer_type]], layers_asym_2[[i]]$r)),
                                                name = paste0("eta", i), dtype = "float32")
@@ -390,12 +425,8 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1, layers_asym_2 = NULL, layers_as
           transeta_tf_asym_2[[i]] <- tf$Variable(matrix(rep(par_init$transeta_mean_init[[layer_type]], layers_asym_2[[i]]$r)),
                                                name = paste0("eta", i), dtype = "float32")
         }
-        eta_tf_asym_2[[i]] <- layers_asym_2[[i]]$trans(transeta_tf_asym_2[[i]]) # ensure positivity for some variables
-
-        swarped_tf2_asym[[i + 1]] <- layers_asym_2[[i]]$f(swarped_tf2_asym[[i]], eta_tf_asym_2[[i]])
 
         layer_type <- layers_asym_3[[i]]$name
-        
         if(layers_asym_3[[i]]$fix_weights) {
           transeta_tf_asym_3[[i]] <- tf$constant(matrix(rep(par_init$transeta_mean_init[[layer_type]], layers_asym_3[[i]]$r)),
                                                  name = paste0("eta", i), dtype = "float32")
@@ -403,45 +434,56 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1, layers_asym_2 = NULL, layers_as
           transeta_tf_asym_3[[i]] <- tf$Variable(matrix(rep(par_init$transeta_mean_init[[layer_type]], layers_asym_3[[i]]$r)),
                                                  name = paste0("eta", i), dtype = "float32")
         }
-        eta_tf_asym_3[[i]] <- layers_asym_3[[i]]$trans(transeta_tf_asym_3[[i]]) # ensure positivity for some variables
-        
-        swarped_tf3_asym[[i + 1]] <- layers_asym_3[[i]]$f(swarped_tf3_asym[[i]], eta_tf_asym_3[[i]])
-
-        scalings_asym[[i + 1]] <- scale_lims_tf(tf$concat(list(swarped_tf3_asym[[i + 1]], swarped_tf2_asym[[i + 1]], swarped_tf1_asym[[i]]), axis=0L))
-        swarped_tf2_asym[[i + 1]] <- scale_0_5_tf(swarped_tf2_asym[[i + 1]], scalings_asym[[i + 1]]$min, scalings_asym[[i + 1]]$max)
-        swarped_tf3_asym[[i + 1]] <- scale_0_5_tf(swarped_tf3_asym[[i + 1]], scalings_asym[[i + 1]]$min, scalings_asym[[i + 1]]$max)
-        swarped_tf1_asym[[i + 1]] <- scale_0_5_tf(swarped_tf1_asym[[i]], scalings_asym[[i + 1]]$min, scalings_asym[[i + 1]]$max)
         
       }
       
     } 
     
-    ##############################################################
     ##Training
     if(method == "REML") {
-      NMLL <- logmarglik_GP_trivar_matern_reml(s_in = swarped_tf1_asym[[nlayers_asym+1]],
-                                               s_in2 = swarped_tf2_asym[[nlayers_asym+1]],
-                                               s_in3 = swarped_tf3_asym[[nlayers_asym+1]],
-                                               X = X,
-                                               Sobs_tf = Sobs_tf,
-                                               l_tf_1 = l_tf_1, l_tf_2 = l_tf_2, l_tf_3 = l_tf_3,
-                                               l_tf_12 = l_tf_12, l_tf_13 = l_tf_13, l_tf_23 = l_tf_23,
-                                               sigma2_tf_1 = sigma2_tf_1, sigma2_tf_2 = sigma2_tf_2, sigma2_tf_3 = sigma2_tf_3,
-                                               sigma2_tf_12 = sigma2_tf_12, sigma2_tf_13 = sigma2_tf_13, sigma2_tf_23 = sigma2_tf_23,
-                                               nu_tf_1 = nu_tf_1, nu_tf_2 = nu_tf_2, nu_tf_3 = nu_tf_3,
-                                               nu_tf_12 = nu_tf_12, nu_tf_13 = nu_tf_13, nu_tf_23 = nu_tf_23,
-                                               z_tf = z_tf,
-                                               ndata = ndata)
-      Cost <- NMLL$Cost
+      Cost_fn = function() {
+        NMLL <- logmarglik_GP_trivar_matern_reml(s_tf = s_tf,
+                                                 X = X,
+                                                 Sobs_tf = Sobs_tf,
+                                                 logsigma2y_tf_1 = logsigma2y_tf_1, 
+                                                 logsigma2y_tf_2 = logsigma2y_tf_2, 
+                                                 logsigma2y_tf_3 = logsigma2y_tf_3,
+                                                 logl_tf = logl_tf, 
+                                                 cdf_nu_tf_1 = cdf_nu_tf_1, 
+                                                 cdf_nu_tf_2 = cdf_nu_tf_2, 
+                                                 cdf_nu_tf_3 = cdf_nu_tf_3, 
+                                                 r_a = r_a, r_b = r_b, r_c = r_c,
+                                                 logsigma2_tf_1 = logsigma2_tf_1, 
+                                                 logsigma2_tf_2 = logsigma2_tf_2, 
+                                                 logsigma2_tf_3 = logsigma2_tf_3,
+                                                 z_tf = z_tf,
+                                                 ndata = ndata,
+                                                 normal = normal,
+                                                 family = family, 
+                                                 layers_asym_2 = layers_asym_2,
+                                                 layers_asym_3 = layers_asym_3,
+                                                 transeta_tf_asym_2 = transeta_tf_asym_2,
+                                                 transeta_tf_asym_3 = transeta_tf_asym_3,
+                                                 a_tf_asym_2 = a_tf_asym_2,
+                                                 a_tf_asym_3 = a_tf_asym_3,
+                                                 scalings_asym = scalings_asym)
+        NMLL$Cost
+      }
     } else {
       stop("Only REML is implemented")
     }
     
     ## Optimisers for top layer
-    trains2y = (tf$train$GradientDescentOptimizer(learn_rates$sigma2y))$minimize(Cost, var_list = list(logsigma2y_tf_1, logsigma2y_tf_2, logsigma2y_tf_3))
-    traincovfun = (tf$train$AdamOptimizer(learn_rates$covfun))$minimize(Cost, var_list = list(logl_tf, cdf_nu_tf_1, cdf_nu_tf_2, cdf_nu_tf_3, r_a, r_b, r_c))
-    trains2eta = (tf$train$AdamOptimizer(learn_rates$sigma2eta))$minimize(Cost, var_list = list(logsigma2_tf_1, logsigma2_tf_2, logsigma2_tf_3))
-    
+    trains2y = function(loss_fn, var_list) 
+      train_step(loss_fn, var_list, tf$optimizers$SGD(learn_rates$sigma2y))
+    traincovfun = function(loss_fn, var_list) 
+      train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$covfun))
+    trains2eta = function(loss_fn, var_list) 
+      train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$sigma2eta))
+    # trains2y = (tf$optimizers$SGD(learn_rates$sigma2y))$minimize
+    # traincovfun = (tf$optimizers$Adam(learn_rates$covfun))$minimize
+    # trains2eta = (tf$optimizers$Adam(learn_rates$sigma2eta))$minimize
+
     ## Optimisers for eta (all hidden layers except LFT)
     nAFFlayers <- sum(sapply(layers_asym_2, function(l) l$name) == "AFF_1D") + 
       sum(sapply(layers_asym_2, function(l) l$name) == "AFF_2D") +
@@ -454,18 +496,24 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1, layers_asym_2 = NULL, layers_as
     opt_eta <- (nlayers_asym > 0) & (nAFFlayers < nlayers_asym)
     if(opt_eta){
       if(method == "REML") {
-        traineta_mean = (tf$train$AdamOptimizer(learn_rates$eta_mean))$minimize(Cost, var_list = list(transeta_tf_asym_2[notAFFidx], transeta_tf_asym_3[notAFFidx]))
+        traineta_mean = function(loss_fn, var_list) 
+          train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$eta_mean))
+        # traineta_mean = (tf$optimizers$Adam(learn_rates$eta_mean))$minimize
       } 
     }
     
+    a_tf_asym_2 = a_tf_asym_3 = NULL
     if(nAFFlayers > 0) {
-      trainAFFpars2 <- (tf$train$AdamOptimizer(learn_rates$AFFpars))$minimize(Cost, var_list = list(lapply(layers_asym_2[AFFidx], function(l) l$pars)))
-      trainAFFpars3 <- (tf$train$AdamOptimizer(learn_rates$AFFpars))$minimize(Cost, var_list = list(lapply(layers_asym_3[AFFidx], function(l) l$pars)))
+      for(i in 1:nAFFlayers){ a_tf_asym_2[[i]] <- layers_asym_2[[AFFidx]]$pars } # !!!
+      for(i in 1:nAFFlayers){ a_tf_asym_3[[i]] <- layers_asym_3[[AFFidx]]$pars }
+      trainAFFpars2 = function(loss_fn, var_list) 
+        train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$AFFpars))
+      trainAFFpars3 = function(loss_fn, var_list) 
+        train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$AFFpars))
+      # trainAFFpars2 = (tf$optimizers$Adam(learn_rates$AFFpars))$minimize
+      # trainAFFpars3 = (tf$optimizers$Adam(learn_rates$AFFpars))$minimize
     }
-    
-    init <- tf$global_variables_initializer()
-    run <- tf$Session()$run
-    run(init)
+
     Objective <- rep(0, nsteps*2)
     
     if(method == "REML") {
@@ -474,83 +522,265 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1, layers_asym_2 = NULL, layers_as
     
     cat("Measurement-error variance and cov. fn. parameters... \n")
     for(i in 1:(nsteps*2)) {
-      if(nAFFlayers > 0) run(trainAFFpars2)
-      if(nAFFlayers > 0) run(trainAFFpars3)
+      if(nAFFlayers > 0) trainAFFpars2(Cost_fn, var_list = a_tf_asym_2[[AFFidx]])
+      if(nAFFlayers > 0) trainAFFpars3(Cost_fn, var_list = a_tf_asym_3[[AFFidx]])
       
-      if(opt_eta) run(traineta_mean)
+      if(opt_eta) traineta_mean(Cost_fn, var_list = list(transeta_tf_asym_2[notAFFidx], transeta_tf_asym_3[notAFFidx]))
       
-      run(trains2y)
-      run(traincovfun)
-      run(trains2eta)
-      thisML <- -run(Cost)
+      trains2y(Cost_fn, var_list = c(logsigma2y_tf_1, logsigma2y_tf_2, logsigma2y_tf_3))
+      traincovfun(Cost_fn, var_list = c(logl_tf, cdf_nu_tf_1, cdf_nu_tf_2, cdf_nu_tf_3, r_a, r_b, r_c))
+      trains2eta(Cost_fn, var_list = c(logsigma2_tf_1, logsigma2_tf_2, logsigma2_tf_3))
+      thisML <- -Cost_fn()
       if((i %% 10) == 0)
         cat(paste("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
-      Objective[i] <- thisML
+      Objective[i] <- as.numeric(thisML)
     }
     
-  if (family == "matern_stat_asymm"){
-    swarped_tf1 <- swarped_tf1_asym[[nlayers_asym+1]]
-    swarped_tf2 <- swarped_tf2_asym[[nlayers_asym+1]]
-    swarped_tf3 <- swarped_tf3_asym[[nlayers_asym+1]]
-    eta_tf <- NULL
-    scalings <- NULL
-    nlayers <- NULL
-  }
+    eta_tf_asym_2 <- eta_tf_asym_3 <- swarped_tf1_asym <- swarped_tf2_asym <- swarped_tf3_asym <- list()
+    swarped_tf1_asym[[1]] <- s_tf
+    swarped_tf2_asym[[1]] <- s_tf
+    swarped_tf3_asym[[1]] <- s_tf
     
-  if (family == "matern_nonstat_asymm"){
+    for(i in 1:nlayers_asym) {
+      # need to adapt this for LFT layer
+      if (layers_asym_2[[i]]$name %in% c("AFF_1D", "AFF_2D", "LFT")) {
+        transa_tf_asym_2 <- layers_asym_2[[i]]$trans(a_tf_asym_2[[i]]) # which(AFFidx == i)
+        swarped_tf2_asym[[i + 1]] <- layers_asym_2[[i]]$f(swarped_tf2_asym[[i]], transa_tf_asym_2)
+      } else { 
+        eta_tf_asym_2[[i]] <- layers_asym_2[[i]]$trans(transeta_tf_asym_2[[i]])
+        swarped_tf2_asym[[i + 1]] <- layers_asym_2[[i]]$f(swarped_tf2_asym[[i]], eta_tf_asym_2[[i]])
+      }
+      if (layers_asym_3[[i]]$name %in% c("AFF_1D", "AFF_2D", "LFT")) {
+        transa_tf_asym_3 <- layers_asym_3[[i]]$trans(a_tf_asym_3[[i]]) # which(AFFidx == i)
+        swarped_tf3_asym[[i + 1]] <- layers_asym_3[[i]]$f(swarped_tf3_asym[[i]], transa_tf_asym_3)
+      } else { 
+        eta_tf_asym_3[[i]] <- layers_asym_3[[i]]$trans(transeta_tf_asym_3[[i]])
+        swarped_tf3_asym[[i + 1]] <- layers_asym_3[[i]]$f(swarped_tf3_asym[[i]], eta_tf_asym_3[[i]])
+      }
       
-    swarped_tf1_0 <- run(swarped_tf1_asym[[nlayers_asym+1]])
-    swarped_tf2_0 <- run(swarped_tf2_asym[[nlayers_asym+1]])
-    swarped_tf3_0 <- run(swarped_tf3_asym[[nlayers_asym+1]])
+      scalings_asym[[i + 1]] <- scale_lims_tf(tf$concat(list(swarped_tf3_asym[[i + 1]], swarped_tf2_asym[[i + 1]], swarped_tf1_asym[[i]]), axis=0L))
+      swarped_tf2_asym[[i + 1]] <- scale_0_5_tf(swarped_tf2_asym[[i + 1]], scalings_asym[[i + 1]]$min, scalings_asym[[i + 1]]$max)
+      swarped_tf3_asym[[i + 1]] <- scale_0_5_tf(swarped_tf3_asym[[i + 1]], scalings_asym[[i + 1]]$min, scalings_asym[[i + 1]]$max)
+      swarped_tf1_asym[[i + 1]] <- scale_0_5_tf(swarped_tf1_asym[[i]], scalings_asym[[i + 1]]$min, scalings_asym[[i + 1]]$max)
+    }
     
-    for (j in 1:nlayers_asym){
-      if(layers_asym_2[[j]]$fix_weights) {
-        layers_asym_2[[j]]$pars <- tf$unstack(tf$constant(run(layers_asym_2[[j]]$pars),
-                                                        dtype="float32"))
-        layers_asym_3[[j]]$pars <- tf$unstack(tf$constant(run(layers_asym_3[[j]]$pars),
-                                                          dtype="float32"))
+    # ---------------------------------------
+    # ---------------------------------------
+    if (family == "matern_stat_asymm"){
+      swarped_tf1 <- swarped_tf1_asym[[nlayers_asym+1]]
+      swarped_tf2 <- swarped_tf2_asym[[nlayers_asym+1]]
+      swarped_tf3 <- swarped_tf3_asym[[nlayers_asym+1]]
+      eta_tf <- NULL
+      scalings <- NULL
+      nlayers <- NULL
+      a_tf <- NULL
+      
+      NMLL <- logmarglik_GP_trivar_matern_reml(s_tf = s_tf,
+                                               X = X,
+                                               Sobs_tf = Sobs_tf,
+                                               logsigma2y_tf_1 = logsigma2y_tf_1, 
+                                               logsigma2y_tf_2 = logsigma2y_tf_2, 
+                                               logsigma2y_tf_3 = logsigma2y_tf_3,
+                                               logl_tf = logl_tf, 
+                                               cdf_nu_tf_1 = cdf_nu_tf_1, 
+                                               cdf_nu_tf_2 = cdf_nu_tf_2, 
+                                               cdf_nu_tf_3 = cdf_nu_tf_3, 
+                                               r_a = r_a, r_b = r_b, r_c = r_c,
+                                               logsigma2_tf_1 = logsigma2_tf_1, 
+                                               logsigma2_tf_2 = logsigma2_tf_2, 
+                                               logsigma2_tf_3 = logsigma2_tf_3,
+                                               z_tf = z_tf,
+                                               ndata = ndata,
+                                               normal = normal,
+                                               family = family, 
+                                               layers_asym_2 = layers_asym_2,
+                                               layers_asym_3 = layers_asym_3,
+                                               transeta_tf_asym_2 = transeta_tf_asym_2,
+                                               transeta_tf_asym_3 = transeta_tf_asym_3,
+                                               a_tf_asym_2 = a_tf_asym_2,
+                                               a_tf_asym_3 = a_tf_asym_3,
+                                               scalings_asym = scalings_asym)
+    }
+    
+    # ---------------------------------------
+    # ---------------------------------------
+    if (family == "matern_nonstat_asymm"){
+      
+      swarped_tf1_0 <- swarped_tf1_asym[[nlayers_asym+1]]
+      swarped_tf2_0 <- swarped_tf2_asym[[nlayers_asym+1]]
+      swarped_tf3_0 <- swarped_tf3_asym[[nlayers_asym+1]]
+      
+      # for (j in 1:nlayers_asym){
+      #   if(layers_asym_2[[j]]$fix_weights) {
+      #     layers_asym_2[[j]]$pars <- tf$unstack(layers_asym_2[[j]]$pars)
+      #     layers_asym_3[[j]]$pars <- tf$unstack(layers_asym_3[[j]]$pars)
+      #   }
+      # }
+      # 
+      # for (j in 1:(nlayers_asym+1)){
+      #   scalings_asym[[j]]$min <- tf$constant(scalings_asym[[j]]$min, dtype="float32") 
+      #   scalings_asym[[j]]$max <- tf$constant(scalings_asym[[j]]$max, dtype="float32") 
+      # }
+      # 
+      # for (j in 1:nlayers_asym){
+      #   if(!layers_asym[[j]]$fix_weights) {
+      #     eta_tf_asym_2[[j]] <- tf$constant(eta_tf_asym_2[[j]], dtype="float32") 
+      #     eta_tf_asym_3[[j]] <- tf$constant(eta_tf_asym_3[[j]], dtype="float32") 
+      #   }
+      # }
+      
+      stopifnot(is.list(layers))
+      method = match.arg(method, "REML")
+      nlayers <- length(layers)
+      
+      if(method == "REML") {
+        ## Do the warping
+        
+        transeta_tf <- list()
+        
+        scalings <- list(scale_lims_tf(tf$concat(list(swarped_tf1_0, swarped_tf2_0, swarped_tf3_0), axis=0L)))
+        
+        for(i in 1:nlayers) {
+          layer_type <- layers[[i]]$name
+          
+          if(layers[[i]]$fix_weights) {
+            transeta_tf[[i]] <- tf$constant(matrix(rep(par_init$transeta_mean_init[[layer_type]], layers[[i]]$r)),
+                                            name = paste0("eta", i), dtype = "float32")
+          } else {
+            transeta_tf[[i]] <- tf$Variable(matrix(rep(par_init$transeta_mean_init[[layer_type]], layers[[i]]$r)),
+                                            name = paste0("eta", i), dtype = "float32")
+          }
+          
+        }
+        
       } 
-    }
-    
-    for (j in 1:(nlayers_asym+1)){
-      scalings_asym[[j]]$min <- tf$constant(run(scalings_asym[[j]]$min), dtype="float32") 
-      scalings_asym[[j]]$max <- tf$constant(run(scalings_asym[[j]]$max), dtype="float32") 
-    }
-    
-    for (j in 1:nlayers_asym){
-      eta_tf_asym_2[[j]] <- tf$constant(run(eta_tf_asym_2[[j]]), dtype="float32") 
-      eta_tf_asym_3[[j]] <- tf$constant(run(eta_tf_asym_3[[j]]), dtype="float32") 
-    }  
-    
-    stopifnot(is.list(layers))
-    method = match.arg(method)
-    nlayers <- length(layers)
-    
-    if(method == "REML") {
-      ## Do the warping
       
-      transeta_tf <- eta_tf <- swarped_tf1 <- swarped_tf2 <- swarped_tf3 <- list()
-      swarped_tf1[[1]] <- tf$constant(swarped_tf1_0, dtype="float32")
-      swarped_tf2[[1]] <- tf$constant(swarped_tf2_0, dtype="float32")
-      swarped_tf3[[1]] <- tf$constant(swarped_tf3_0, dtype="float32")
+      ##############################################################
+      ##Training
+      if(method == "REML") {
+        Cost_fn = function() {
+          NMLL <- logmarglik_GP_trivar_matern_reml(s_tf = swarped_tf1_0,
+                                                   s_tf2 = swarped_tf2_0,
+                                                   s_tf3 = swarped_tf3_0,
+                                                   X = X,
+                                                   Sobs_tf = Sobs_tf,
+                                                   logsigma2y_tf_1 = logsigma2y_tf_1, 
+                                                   logsigma2y_tf_2 = logsigma2y_tf_2, 
+                                                   logsigma2y_tf_3 = logsigma2y_tf_3,
+                                                   logl_tf = logl_tf, 
+                                                   cdf_nu_tf_1 = cdf_nu_tf_1, 
+                                                   cdf_nu_tf_2 = cdf_nu_tf_2, 
+                                                   cdf_nu_tf_3 = cdf_nu_tf_3, 
+                                                   r_a = r_a, r_b = r_b, r_c = r_c,
+                                                   logsigma2_tf_1 = logsigma2_tf_1, 
+                                                   logsigma2_tf_2 = logsigma2_tf_2, 
+                                                   logsigma2_tf_3 = logsigma2_tf_3,
+                                                   z_tf = z_tf,
+                                                   ndata = ndata,
+                                                   normal = normal,
+                                                   family = family, 
+                                                   layers = layers,
+                                                   a_tf = a_tf,
+                                                   transeta_tf = transeta_tf,
+                                                   scalings = scalings)
+          NMLL$Cost
+        }
+      }
       
-      scalings <- list(scale_lims_tf(tf$concat(list(swarped_tf1[[1]], swarped_tf2[[1]], swarped_tf3[[1]]), axis=0L)))
+      ## Optimisers for top layer
+      trains2y = function(loss_fn, var_list) 
+        train_step(loss_fn, var_list, tf$optimizers$SGD(learn_rates$sigma2y))
+      traincovfun = function(loss_fn, var_list) 
+        train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$covfun))
+      trains2eta = function(loss_fn, var_list) 
+        train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$sigma2eta))
+      # trains2y = (tf$optimizers$SGD(learn_rates$sigma2y))$minimize
+      # traincovfun = (tf$optimizers$Adam(learn_rates$covfun))$minimize
+      # trains2eta = (tf$optimizers$Adam(learn_rates$sigma2eta))$minimize
+      
+      ## Optimisers for eta (all hidden layers except LFT)
+      nLFTlayers <- sum(sapply(layers, function(l) l$name) == "LFT")
+      
+      LFTidx <- which(sapply(layers, function(l) l$name) == "LFT")
+      
+      notLFTidx <- setdiff(1:nlayers, LFTidx)
+      
+      opt_eta <- (nlayers > 0) & (nLFTlayers < nlayers)
+      if(opt_eta)
+        if(method == "REML") {
+          traineta_mean = function(loss_fn, var_list) 
+            train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$eta_mean))
+          # traineta_mean = (tf$optimizers$Adam(learn_rates$eta_mean))$minimize
+        } 
+      
+      a_tf = NULL
+      if(nLFTlayers > 0) {
+        a_tf = layers[[LFTidx]]$pars
+        trainLFTpars = function(loss_fn, var_list) 
+          train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$LFTpars))
+        # trainLFTpars <- (tf$optimizers$Adam(learn_rates$LFTpars))$minimize
+      }
+      
+      
+      Objective <- c(Objective, rep(0, nsteps*3))
+      
+      if(method == "REML") {
+        negcostname <- "Restricted Likelihood"
+      } 
+      
+      cat("Learning weight parameters... \n")
+      for(i in (2*nsteps+1):(3*nsteps)) {
+        if(opt_eta) traineta_mean(Cost_fn, var_list = transeta_tf[notLFTidx])
+        thisML <- -Cost_fn()
+        if((i %% 10) == 0)
+          cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
+        Objective[i] <- as.numeric(thisML)
+      }
+      
+      cat("Measurement-error variance and cov. fn. parameters... \n")
+      for(i in (3*nsteps+1):(4*nsteps)) {
+        if(nLFTlayers > 0) trainLFTpars(Cost_fn, var_list = a_tf)
+        trains2y(Cost_fn, var_list = c(logsigma2y_tf_1, logsigma2y_tf_2, logsigma2y_tf_3))
+        traincovfun(Cost_fn, var_list = c(logl_tf, cdf_nu_tf_1, cdf_nu_tf_2, cdf_nu_tf_3, r_a, r_b, r_c))
+        trains2eta(Cost_fn, var_list = c(logsigma2_tf_1, logsigma2_tf_2, logsigma2_tf_3))
+        thisML <- -Cost_fn()
+        if((i %% 10) == 0)
+          cat(paste("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
+        Objective[i] <- as.numeric(thisML)
+      }
+      
+      cat("Updating everything... \n")
+      for(i in (4*nsteps + 1):(5 * nsteps)) {
+        if(opt_eta) traineta_mean(Cost_fn, var_list = transeta_tf[notLFTidx])
+        if(nLFTlayers > 0) trainLFTpars(Cost_fn, var_list = a_tf)
+        trains2y(Cost_fn, var_list = c(logsigma2y_tf_1, logsigma2y_tf_2, logsigma2y_tf_3))
+        traincovfun(Cost_fn, var_list = c(logl_tf, cdf_nu_tf_1, cdf_nu_tf_2, cdf_nu_tf_3, r_a, r_b, r_c))
+        trains2eta(Cost_fn, var_list = c(logsigma2_tf_1, logsigma2_tf_2, logsigma2_tf_3))
+        thisML <- -Cost_fn()
+        if((i %% 10) == 0)
+          cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
+        Objective[i] <- as.numeric(thisML)
+      }
+      
+      eta_tf <- swarped_tf1 <- swarped_tf2 <- swarped_tf3 <- list()
+      swarped_tf1[[1]] <- swarped_tf1_0
+      swarped_tf2[[1]] <- swarped_tf2_0
+      swarped_tf3[[1]] <- swarped_tf3_0
       
       for(i in 1:nlayers) {
         layer_type <- layers[[i]]$name
         
-        if(layers[[i]]$fix_weights) {
-          transeta_tf[[i]] <- tf$constant(matrix(rep(par_init$transeta_mean_init[[layer_type]], layers[[i]]$r)),
-                                          name = paste0("eta", i), dtype = "float32")
-        } else {
-          transeta_tf[[i]] <- tf$Variable(matrix(rep(par_init$transeta_mean_init[[layer_type]], layers[[i]]$r)),
-                                          name = paste0("eta", i), dtype = "float32")
+        if (layers[[i]]$name %in% c("AFF_1D", "AFF_2D", "LFT")) {
+          a_inum_tf = layers[[i]]$trans(a_tf)
+          swarped_tf1[[i + 1]] <- layers[[i]]$f(swarped_tf1[[i]], a_inum_tf)
+          swarped_tf2[[i + 1]] <- layers[[i]]$f(swarped_tf2[[i]], a_inum_tf)
+          swarped_tf3[[i + 1]] <- layers[[i]]$f(swarped_tf3[[i]], a_inum_tf)
+        } else { 
+          eta_tf[[i]] <- layers[[i]]$trans(transeta_tf[[i]]) # ensure positivity for some variables
+          swarped_tf1[[i + 1]] <- layers[[i]]$f(swarped_tf1[[i]], eta_tf[[i]])
+          swarped_tf2[[i + 1]] <- layers[[i]]$f(swarped_tf2[[i]], eta_tf[[i]])
+          swarped_tf3[[i + 1]] <- layers[[i]]$f(swarped_tf3[[i]], eta_tf[[i]])
         }
-        eta_tf[[i]] <- layers[[i]]$trans(transeta_tf[[i]]) # ensure positivity for some variables
-        
-        swarped_tf1[[i + 1]] <- layers[[i]]$f(swarped_tf1[[i]], eta_tf[[i]])
-        swarped_tf2[[i + 1]] <- layers[[i]]$f(swarped_tf2[[i]], eta_tf[[i]])
-        swarped_tf3[[i + 1]] <- layers[[i]]$f(swarped_tf3[[i]], eta_tf[[i]])
         
         scalings[[i + 1]] <- scale_lims_tf(tf$concat(list(swarped_tf1[[i + 1]], swarped_tf2[[i + 1]], swarped_tf3[[i + 1]]), axis=0L))
         swarped_tf1[[i + 1]] <- scale_0_5_tf(swarped_tf1[[i + 1]], scalings[[i + 1]]$min, scalings[[i + 1]]$max)
@@ -559,111 +789,92 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1, layers_asym_2 = NULL, layers_as
         
       }
       
-    } 
-    
-    ##############################################################
-    ##Training
-    if(method == "REML") {
-      NMLL <- logmarglik_GP_trivar_matern_reml(s_in = swarped_tf1[[nlayers+1]],
-                                               s_in2 = swarped_tf2[[nlayers+1]],
-                                               s_in3 = swarped_tf3[[nlayers+1]],
+      swarped_tf1 <- swarped_tf1[[nlayers+1]]
+      swarped_tf2 <- swarped_tf2[[nlayers+1]]
+      swarped_tf3 <- swarped_tf3[[nlayers+1]]
+      
+      NMLL <- logmarglik_GP_trivar_matern_reml(s_tf = swarped_tf1_0,
+                                               s_tf2 = swarped_tf2_0,
+                                               s_tf3 = swarped_tf3_0,
                                                X = X,
                                                Sobs_tf = Sobs_tf,
-                                               l_tf_1 = l_tf_1, l_tf_2 = l_tf_2, l_tf_3 = l_tf_3,
-                                               l_tf_12 = l_tf_12, l_tf_13 = l_tf_13, l_tf_23 = l_tf_23,
-                                               sigma2_tf_1 = sigma2_tf_1, sigma2_tf_2 = sigma2_tf_2, sigma2_tf_3 = sigma2_tf_3,
-                                               sigma2_tf_12 = sigma2_tf_12, sigma2_tf_13 = sigma2_tf_13, sigma2_tf_23 = sigma2_tf_23,
-                                               nu_tf_1 = nu_tf_1, nu_tf_2 = nu_tf_2, nu_tf_3 = nu_tf_3,
-                                               nu_tf_12 = nu_tf_12, nu_tf_13 = nu_tf_13, nu_tf_23 = nu_tf_23,
+                                               logsigma2y_tf_1 = logsigma2y_tf_1, 
+                                               logsigma2y_tf_2 = logsigma2y_tf_2, 
+                                               logsigma2y_tf_3 = logsigma2y_tf_3,
+                                               logl_tf = logl_tf, 
+                                               cdf_nu_tf_1 = cdf_nu_tf_1, 
+                                               cdf_nu_tf_2 = cdf_nu_tf_2, 
+                                               cdf_nu_tf_3 = cdf_nu_tf_3, 
+                                               r_a = r_a, r_b = r_b, r_c = r_c,
+                                               logsigma2_tf_1 = logsigma2_tf_1, 
+                                               logsigma2_tf_2 = logsigma2_tf_2, 
+                                               logsigma2_tf_3 = logsigma2_tf_3,
                                                z_tf = z_tf,
-                                               ndata = ndata)
-      Cost <- NMLL$Cost
+                                               ndata = ndata,
+                                               normal = normal,
+                                               family = family, 
+                                               layers = layers,
+                                               a_tf = a_tf,
+                                               transeta_tf = transeta_tf,
+                                               scalings = scalings)
     }
-    
-    ## Optimisers for top layer
-    trains2y = (tf$train$GradientDescentOptimizer(learn_rates$sigma2y))$minimize(Cost, var_list = list(logsigma2y_tf_1, logsigma2y_tf_2, logsigma2y_tf_3))
-    traincovfun = (tf$train$AdamOptimizer(learn_rates$covfun))$minimize(Cost, var_list = list(logl_tf, cdf_nu_tf_1, cdf_nu_tf_2, cdf_nu_tf_3, r_a, r_b, r_c))
-    trains2eta = (tf$train$AdamOptimizer(learn_rates$sigma2eta))$minimize(Cost, var_list = list(logsigma2_tf_1, logsigma2_tf_2, logsigma2_tf_3))
-    
-    ## Optimisers for eta (all hidden layers except LFT)
-    nLFTlayers <- sum(sapply(layers, function(l) l$name) == "LFT")
-    
-    LFTidx <- which(sapply(layers, function(l) l$name) == "LFT")
-
-    notLFTidx <- setdiff(1:nlayers, LFTidx)
-
-    opt_eta <- (nlayers > 0) & (nLFTlayers < nlayers)
-    if(opt_eta)
-      if(method == "REML") {
-        traineta_mean = (tf$train$AdamOptimizer(learn_rates$eta_mean))$minimize(Cost, var_list = list(transeta_tf[notLFTidx]))
-      } 
-    if(nLFTlayers > 0) {
-      trainLFTpars <- (tf$train$AdamOptimizer(learn_rates$LFTpars))$minimize(Cost, var_list = lapply(layers[LFTidx], function(l) l$pars))
-    }
-    
-    init <- tf$global_variables_initializer()
-    run <- tf$Session()$run
-    run(init)
-    
-    Objective <- c(Objective, rep(0, nsteps*3))
-    
-    if(method == "REML") {
-      negcostname <- "Restricted Likelihood"
-    } 
-    
-    cat("Learning weight parameters... \n")
-    for(i in (2*nsteps+1):(3*nsteps)) {
-      if(opt_eta) run(traineta_mean)
-      thisML <- -run(Cost)
-      if((i %% 10) == 0)
-        cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
-      Objective[i] <- thisML
-    }
-
-    cat("Measurement-error variance and cov. fn. parameters... \n")
-    for(i in (3*nsteps+1):(4*nsteps)) {
-      if(nLFTlayers > 0) run(trainLFTpars)
-      run(trains2y)
-      run(traincovfun)
-      run(trains2eta)
-      thisML <- -run(Cost)
-      if((i %% 10) == 0)
-        cat(paste("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
-      Objective[i] <- thisML
-    }
-    
-    cat("Updating everything... \n")
-    for(i in (4*nsteps + 1):(5 * nsteps)) {
-      if(opt_eta) run(traineta_mean)
-      if(nLFTlayers > 0) run(trainLFTpars)
-      run(trains2y)
-      run(traincovfun)
-      run(trains2eta)
-      thisML <- -run(Cost)
-      if((i %% 10) == 0)
-        cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
-      Objective[i] <- thisML
-    }
-    
-    swarped_tf1 <- swarped_tf1[[nlayers+1]]
-    swarped_tf2 <- swarped_tf2[[nlayers+1]]
-    swarped_tf3 <- swarped_tf3[[nlayers+1]]
-    
-   }
-    
   }
     
+  
+  sigma2y_tf_1 <- tf$exp(logsigma2y_tf_1)
+  sigma2y_tf_2 <- tf$exp(logsigma2y_tf_2)
+  sigma2y_tf_3 <- tf$exp(logsigma2y_tf_3)
+  
+  precy_tf_1 <- tf$math$reciprocal(sigma2y_tf_1)
+  precy_tf_2 <- tf$math$reciprocal(sigma2y_tf_2)
+  precy_tf_3 <- tf$math$reciprocal(sigma2y_tf_3)
+  
+  Qobs_tf_1 <- tf$multiply(tf$math$reciprocal(sigma2y_tf_1), tf$eye(ndata))
+  Qobs_tf_2 <- tf$multiply(tf$math$reciprocal(sigma2y_tf_2), tf$eye(ndata))
+  Qobs_tf_3 <- tf$multiply(tf$math$reciprocal(sigma2y_tf_3), tf$eye(ndata))
+  
+  Sobs_tf_1 <- tf$multiply(sigma2y_tf_1, tf$eye(ndata))
+  Sobs_tf_2 <- tf$multiply(sigma2y_tf_2, tf$eye(ndata))
+  Sobs_tf_3 <- tf$multiply(sigma2y_tf_3, tf$eye(ndata))
+  
+  Mat_zero <- tf$zeros(shape=c(ndata,ndata), dtype=tf$float32)
+  Qobs_tf <- tf$concat(list(tf$concat(list(Qobs_tf_1, Mat_zero, Mat_zero), axis=1L),
+                            tf$concat(list(Mat_zero, Qobs_tf_2, Mat_zero), axis=1L),
+                            tf$concat(list(Mat_zero, Mat_zero, Qobs_tf_3), axis=1L)), axis=0L)
+  Sobs_tf <- tf$concat(list(tf$concat(list(Sobs_tf_1, Mat_zero, Mat_zero), axis=1L),
+                            tf$concat(list(Mat_zero, Sobs_tf_2, Mat_zero), axis=1L),
+                            tf$concat(list(Mat_zero, Mat_zero, Sobs_tf_3), axis=1L)), axis=0L)
+  
+  sigma2_tf_1 <- tf$exp(logsigma2_tf_1)
+  sigma2_tf_2 <- tf$exp(logsigma2_tf_2)
+  sigma2_tf_3 <- tf$exp(logsigma2_tf_3)
+  
+  l_tf_1 <- tf$exp(logl_tf)
+  l_tf_2 <- l_tf_3 <- l_tf_12 <- l_tf_13 <- l_tf_23 <- l_tf_1
+  
+  nu_tf_1 <-  3.5*normal$cdf(cdf_nu_tf_1) 
+  nu_tf_2 <-  3.5*normal$cdf(cdf_nu_tf_2)
+  nu_tf_3 <-  3.5*normal$cdf(cdf_nu_tf_3)
+  nu_tf_12 <- (nu_tf_1 + nu_tf_2)/2
+  nu_tf_13 <- (nu_tf_1 + nu_tf_3)/2
+  nu_tf_23 <- (nu_tf_2 + nu_tf_3)/2
+  
+  r_12 <- tf$divide(r_a, tf$sqrt(tf$square(r_a) + 1))
+  r_13 <- tf$divide(r_b, tf$sqrt(tf$square(r_b) + tf$square(r_c) + 1))
+  r_23 <- tf$divide(r_a, tf$sqrt(tf$square(r_a) + 1)) * tf$divide(r_b, tf$sqrt(tf$square(r_b) + tf$square(r_c) + 1)) + 
+    tf$divide(1, tf$sqrt(tf$square(r_a) + 1)) * tf$divide(r_c, tf$sqrt(tf$square(r_b) + tf$square(r_c) + 1))
+  rho_tf_12 <- tf$divide(r_12 * tf$sqrt(nu_tf_1) * tf$sqrt(nu_tf_2), nu_tf_12)
+  rho_tf_13 <- tf$divide(r_13 * tf$sqrt(nu_tf_1) * tf$sqrt(nu_tf_3), nu_tf_13)
+  rho_tf_23 <- tf$divide(r_23 * tf$sqrt(nu_tf_2) * tf$sqrt(nu_tf_3), nu_tf_23)
+  sigma2_tf_12 <- rho_tf_12 * tf$sqrt(sigma2_tf_1) * tf$sqrt(sigma2_tf_2)
+  sigma2_tf_13 <- rho_tf_13 * tf$sqrt(sigma2_tf_1) * tf$sqrt(sigma2_tf_3)
+  sigma2_tf_23 <- rho_tf_23 * tf$sqrt(sigma2_tf_2) * tf$sqrt(sigma2_tf_3)
+  
   deepspat.obj <- list(f = f,
                        g = g,
                        data = data,
                        X = X,
-                       layers = layers,
-                       layers_asym_2 = layers_asym_2,
-                       layers_asym_3 = layers_asym_3,
                        Cost = NMLL$Cost,
-                       eta_tf = eta_tf,
-                       eta_tf_asym_2 = eta_tf_asym_2,
-                       eta_tf_asym_3 = eta_tf_asym_3,
                        beta = NMLL$beta,
                        precy_tf_1 = precy_tf_1,
                        precy_tf_2 = precy_tf_2,
@@ -686,12 +897,21 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1, layers_asym_2 = NULL, layers_as
                        nu_tf_12 = nu_tf_12,
                        nu_tf_13 = nu_tf_13,
                        nu_tf_23 = nu_tf_23,
+                       layers = layers,
+                       layers_asym_2 = layers_asym_2,
+                       layers_asym_3 = layers_asym_3,
+                       eta_tf = eta_tf,
+                       eta_tf_asym_2 = eta_tf_asym_2,
+                       eta_tf_asym_3 = eta_tf_asym_3,
+                       a_tf = a_tf,
+                       a_tf_asym_2 = a_tf_asym_2,
+                       a_tf_asym_3 = a_tf_asym_3,
                        scalings = scalings,
                        scalings_asym = scalings_asym,
                        method = method,
                        nlayers = nlayers,
                        nlayers_asym = nlayers_asym,
-                       run = run,
+                       # run = run,
                        swarped_tf1 = swarped_tf1,
                        swarped_tf2 = swarped_tf2,
                        swarped_tf3 = swarped_tf3,
@@ -699,8 +919,8 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1, layers_asym_2 = NULL, layers_as
                        z_tf_1 = z_tf_1,
                        z_tf_2 = z_tf_2,
                        z_tf_3 = z_tf_3,
-                       family = family
-                       )
+                       family = family)
+  
     class(deepspat.obj) <- "deepspat_trivar_GP"
     deepspat.obj
   

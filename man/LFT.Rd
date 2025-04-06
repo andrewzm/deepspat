@@ -4,7 +4,7 @@
 \alias{LFT}
 \title{LFT (Möbius transformation)}
 \usage{
-LFT(a = NULL)
+LFT(a = NULL, dtype = "float32")
 }
 \arguments{
 \item{a}{vector of four complex numbers describing the Möbius transformation}
@@ -24,7 +24,4 @@ LFT(a = NULL)
 }
 \description{
 Sets up a Möbius transformation unit
-}
-\examples{
-layer <- LFT()
 }

@@ -12,6 +12,3 @@ set_deepspat_seed(seed = 1L)
 \description{
 Set TensorFlow seed in deepspat package
 }
-\examples{
-set_deepspat_seed(1L)
-}

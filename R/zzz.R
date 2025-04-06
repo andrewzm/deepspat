@@ -12,30 +12,47 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 
-tf_status <- new.env()
-besselK_tf <- NULL
-
 ## Load TensorFlow and add the cholesky functions
 .onLoad <- function(libname, pkgname) {
   
-  tf <<- reticulate::import("tensorflow", delay_load = TRUE)
-  tf$cholesky_lower <- tf$linalg$cholesky
-  tf$cholesky_upper <- function(x) tf$linalg$transpose(tf$linalg$cholesky(x))
+  #tf <<- reticulate::import("tensorflow", delay_load = TRUE)
   
-  # Load the bessel function
+  #tf$cholesky_lower <- tf$linalg$cholesky
+  #tf$cholesky_upper <- function(x) tf$linalg$matrix_transpose(tf$linalg$cholesky(x))
+  #tf$matrix_inverse <- tf$linalg$inv
   
-  # Set default tf_status that everything is installed correctly.
-  assign("TF", TRUE, envir = tf_status)
-  # Check TensorFlow is installed. Update tf_status accordingly.
-  # checkTF()
-  # If checkTF was not successful, return to avoid printing multiple messages
-  if (!get("TF", envir = tf_status)) {
-    return()
+  get_tf <- function() {
+    if (!exists(".tf", envir = .GlobalEnv)) {
+      tf <- reticulate::import("tensorflow", delay_load = TRUE)
+      tf$cholesky_lower <- tf$linalg$cholesky
+      tf$cholesky_upper <- function(x) tf$linalg$matrix_transpose(tf$linalg$cholesky(x))
+      tf$matrix_inverse <- tf$linalg$inv
+      assign(".tf", tf, envir = .GlobalEnv)
+    }
+    get(".tf", envir = .GlobalEnv)
   }
-  # Check TensorFlow Probability is installed, and load in. Update tf_status accordingly.
   
-  bessel <- reticulate::import_from_path("besselK", system.file("python", package = "deepspat"))
-  besselK_tf <<- bessel$besselK_tf
   
-
+  #bessel <<- reticulate::import_from_path("besselK_tfv2", system.file("python", package = "deepspat"))
+  #besselK_py <<- bessel$besselK_py
+  #besselK_derivative_x_py <<- bessel$besselK_derivative_x_py
+  #besselK_derivative_nu_py <<- bessel$besselK_derivative_nu_py
+  
+  get_bessel <- function() {
+    if (!exists(".bessel", envir = .GlobalEnv)) {
+      bessel <<- reticulate::import_from_path(
+        "besselK_tfv2",
+        system.file("python", package = "deepspat")
+      )
+      besselK_py <<- bessel$besselK_py
+      besselK_derivative_x_py <<- bessel$besselK_derivative_x_py
+      besselK_derivative_nu_py <<- bessel$besselK_derivative_nu_py
+      assign(".bessel", bessel, envir = .GlobalEnv)
+    }
+    get(".bessel", envir = .GlobalEnv)
+  }
+  
+  tf <- get_tf()
+  bessel <- get_bessel()
+  
 }

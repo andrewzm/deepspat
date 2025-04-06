@@ -1,17 +1,3 @@
-## Copyright 2019 Andrew Zammit Mangion
-##
-## Licensed under the Apache License, Version 2.0 (the "License");
-## you may not use this file except in compliance with the License.
-## You may obtain a copy of the License at
-##
-## http://www.apache.org/licenses/LICENSE-2.0
-##
-## Unless required by applicable law or agreed to in writing, software
-## distributed under the License is distributed on an "AS IS" BASIS,
-## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-## See the License for the specific language governing permissions and
-## limitations under the License.
-
 #' @title LFT (Möbius transformation)
 #' @description Sets up a Möbius transformation unit
 #' @param a vector of four complex numbers describing the Möbius transformation
@@ -27,10 +13,9 @@
 #'  \item{"pars"}{List of parameters describing the Möbius transformation as \code{TensorFlow} objects}
 #' }
 #' @export
-#' @examples
-#' layer <- LFT()
-LFT <- function(a = NULL) {
 
+LFT <- function(a = NULL, dtype = "float32") {
+  
   if(is.null(a)) {
     a1 <- a4 <- 1 + 0i
     a2 <- a3 <- 0 + 0i
@@ -42,49 +27,57 @@ LFT <- function(a = NULL) {
     a3 <- a[3]
     a4 <- a[4]
   }
-
-  a1Re_tf <- tf$Variable(1, name = "a1Re", dtype = "float32")
-  a2Re_tf <- tf$Variable(0, name = "a2Re", dtype = "float32")
-  a3Re_tf <- tf$Variable(0, name = "a3Re", dtype = "float32")
-  a4Re_tf <- tf$Variable(1, name = "a4Re", dtype = "float32")
-
-  a1Im_tf <- tf$Variable(0, name = "a1Im", dtype = "float32")
-  a2Im_tf <- tf$Variable(0, name = "a2Im", dtype = "float32")
-  a3Im_tf <- tf$Variable(0, name = "a3Im", dtype = "float32")
-  a4Im_tf <- tf$Variable(0, name = "a4Im", dtype = "float32")
-
-  a1_tf <- tf$complex(real = a1Re_tf, imag = a1Im_tf)
-  a2_tf <- tf$complex(real = a2Re_tf, imag = a2Im_tf)
-  a3_tf <- tf$complex(real = a3Re_tf, imag = a3Im_tf)
-  a4_tf <- tf$complex(real = a4Re_tf, imag = a4Im_tf)
-
-
-  trans <- function(transeta) {
-    transeta
+  
+  a1Re_tf <- tf$Variable(1, name = "a1Re", dtype = dtype)
+  a2Re_tf <- tf$Variable(0, name = "a2Re", dtype = dtype)
+  a3Re_tf <- tf$Variable(0, name = "a3Re", dtype = dtype)
+  a4Re_tf <- tf$Variable(1, name = "a4Re", dtype = dtype)
+  
+  a1Im_tf <- tf$Variable(0, name = "a1Im", dtype = dtype)
+  a2Im_tf <- tf$Variable(0, name = "a2Im", dtype = dtype)
+  a3Im_tf <- tf$Variable(0, name = "a3Im", dtype = dtype)
+  a4Im_tf <- tf$Variable(0, name = "a4Im", dtype = dtype)
+  
+  trans <- function(pars){
+    a1Re_tf = pars[[1]]; a2Re_tf = pars[[2]]; a3Re_tf = pars[[3]]; a4Re_tf = pars[[4]]
+    a1Im_tf = pars[[5]]; a2Im_tf = pars[[6]]; a3Im_tf = pars[[7]]; a4Im_tf = pars[[8]]
+    a1_tf <- tf$complex(real = a1Re_tf, imag = a1Im_tf)
+    a2_tf <- tf$complex(real = a2Re_tf, imag = a2Im_tf)
+    a3_tf <- tf$complex(real = a3Re_tf, imag = a3Im_tf)
+    a4_tf <- tf$complex(real = a4Re_tf, imag = a4Im_tf)
+    list(a1_tf = a1_tf, a2_tf = a2_tf, a3_tf = a3_tf, a4_tf = a4_tf)
   }
 
-  f = function(s_tf, eta_tf) {
+  f = function(s_tf, a_tf) {
+    # a1_tf = a_tf[1,1]; a2_tf = a_tf[2,1]
+    # a3_tf = a_tf[3,1]; a4_tf = a_tf[4,1]
+    a1_tf = a_tf[[1]]; a2_tf = a_tf[[2]]; a3_tf = a_tf[[3]]; a4_tf = a_tf[[4]]
     z <- tf$complex(real = s_tf[, 1], imag = s_tf[, 2])
     P1 <- tf$multiply(a1_tf, z) %>% tf$add(a2_tf)
     P2 <- tf$multiply(a3_tf, z) %>% tf$add(a4_tf)
-    P <- tf$divide(P1, P2) %>% tf$expand_dims(1L)
-    sout_tf <- tf$concat(list(tf$real(P), tf$imag(P)), axis = 1L)
+    P <- tf$math$divide(P1, P2) %>% tf$expand_dims(1L)
+    sout_tf <- tf$concat(list(tf$math$real(P), tf$math$imag(P)), axis = 1L)
   }
-
-  fMC = function(s_tf, eta_tf) {
+  
+  fMC = function(s_tf, a_tf) {
+    # a1_tf = a_tf[1,1]; a2_tf = a_tf[2,1]
+    # a3_tf = a_tf[3,1]; a4_tf = a_tf[4,1]
+    a1_tf = a_tf[[1]]; a2_tf = a_tf[[2]]; a3_tf = a_tf[[3]]; a4_tf = a_tf[[4]]
     z <- tf$complex(real = s_tf[, , 1], imag = s_tf[, , 2])
     P1 <- tf$multiply(a1_tf, z) %>% tf$add(a2_tf)
     P2 <- tf$multiply(a3_tf, z) %>% tf$add(a4_tf)
-    P <- tf$divide(P1, P2) %>% tf$expand_dims(2L)
-    sout_tf <- tf$concat(list(tf$real(P), tf$imag(P)), axis = 2L)
+    P <- tf$math$divide(P1, P2) %>% tf$expand_dims(2L)
+    sout_tf <- tf$concat(list(tf$math$real(P), tf$math$imag(P)), axis = 2L)
   }
-
-  fR = function(s, eta) {
+  
+  fR = function(s, a) {
+    # a1 = a[1,1]; a2 = a[2,1]; a3 = a[3,1]; a4 = a[4,1]
+    a1 = a[[1]]; a2 = a[[2]]; a3 = a[[3]]; a4 = a[[4]]
     z <- s[, 1] + s[, 2]*1i
     fz <- (a1*z + a2) / (a3*z + a4)
     cbind(Re(fz), Im(fz))
   }
-
+  
   list(list(f = f,
             fMC = fMC,
             fR = fR,
@@ -94,6 +87,6 @@ LFT <- function(a = NULL) {
             fix_weights = TRUE,
             pars = list(a1Re_tf, a2Re_tf, a3Re_tf, a4Re_tf,
                         a1Im_tf, a2Im_tf, a3Im_tf, a4Im_tf)))
-
+  # a1Re_tf = a1Re_tf, a2Re_tf = a2Re_tf, a3Re_tf = a3Re_tf, a4Re_tf = a4Re_tf,
+  # a1Im_tf = a1Im_tf, a2Im_tf = a2Im_tf, a3Im_tf = a3Im_tf, a4Im_tf = a4Im_tf
 }
-

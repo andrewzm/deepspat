@@ -9,10 +9,12 @@ init_learn_rates(
   covfun = 0.01,
   sigma2eta = 1e-04,
   eta_mean = 0.1,
+  eta_mean2 = 0.1,
   eta_sd = 0.1,
   LFTpars = 0.01,
   AFFpars = 0.01,
-  rho = 0.1
+  rho = 0.1,
+  vario = 0.1
 )
 }
 \arguments{
@@ -38,7 +40,4 @@ structure of this list.
 }
 \description{
 Provides utility to alter the learning rates when fitting a deepspat model
-}
-\examples{
-str(init_learn_rates(sigma2y = 0.002))
 }

@@ -4,7 +4,7 @@
 \alias{AFF_1D}
 \title{Affine transformation on a 1D domain}
 \usage{
-AFF_1D(a = c(0, 1))
+AFF_1D(a = c(0, 1), dtype = "float32")
 }
 \arguments{
 \item{a}{vector of two real numbers describing an affine transformation on a 1D domain}
@@ -23,7 +23,4 @@ AFF_1D(a = c(0, 1))
 }
 \description{
 Sets up an affine transformation on a 1D domain
-}
-\examples{
-layer <- AFF_1D()
 }

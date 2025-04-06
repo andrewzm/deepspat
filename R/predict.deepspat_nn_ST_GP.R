@@ -1,17 +1,17 @@
-## Copyright 2022 Quan Vu
-##
-## Licensed under the Apache License, Version 2.0 (the "License");
-## you may not use this file except in compliance with the License.
-## You may obtain a copy of the License at
-##
-## http://www.apache.org/licenses/LICENSE-2.0
-##
-## Unless required by applicable law or agreed to in writing, software
-## distributed under the License is distributed on an "AS IS" BASIS,
-## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-## See the License for the specific language governing permissions and
-## limitations under the License.
-
+#' @title Deep compositional spatio-temporal model (with nearest neighbors)
+#' @description Prediction function for the fitted deepspat_nn_ST_GP object
+#' @param object the deepspat_nn_ST_GP object
+#' @param newdata data frame containing the prediction locations
+#' @param ... currently unused
+#' @return \code{predict.deepspat_nn_ST_GP} returns a list with the following item
+#' \describe{
+#'  \item{"df_pred"}{Data frame containing the predictions/prediction intervals at the prediction locations}
+#'  \item{"obs_swarped"}{Observation locations on the spatial warped domain}
+#'  \item{"obs_twarped"}{Observation locations on the temporal warped domain}
+#'  \item{"newdata_swarped"}{New prediction locations on the spatial warped domain}
+#'  \item{"newdata_twarped"}{New prediction locations on the temporal warped domain}
+#'  }
+#' @export
 predict.deepspat_nn_ST_GP <- function(object, newdata, nn_id, ...) {
   
   d <- object
@@ -40,7 +40,7 @@ predict.deepspat_nn_ST_GP <- function(object, newdata, nn_id, ...) {
     obs_twarped <- d$twarped_tf
     
     newdata_swarped <- s_in
-    newdata_twarped <- t_in
+    newdata_twarped <- t_in 
   }
   
   if (d$family %in% c("exp_nonstat_sep", "exp_nonstat_asym")){
@@ -50,7 +50,13 @@ predict.deepspat_nn_ST_GP <- function(object, newdata, nn_id, ...) {
     
     h_tf <- list(s_in)
     for(i in 1:d$nlayers_spat) {
-      h_tf[[i + 1]] <- d$layers_spat[[i]]$f(h_tf[[i]], d$eta_tf[[i]]) %>%
+      if (d$layers_spat[[i]]$name == "LFT") {
+        a_inum_tf <- d$layers_spat[[i]]$trans(d$layers_spat[[i]]$pars)
+        h_tf[[i + 1]] <- d$layers_spat[[i]]$f(h_tf[[i]], a_inum_tf)
+      } else {
+        h_tf[[i + 1]] <- d$layers_spat[[i]]$f(h_tf[[i]], d$eta_tf[[i]]) 
+      }
+      h_tf[[i + 1]] <- h_tf[[i + 1]] %>%
         scale_0_5_tf(smin_tf = d$scalings[[i + 1]]$min,
                      smax_tf = d$scalings[[i + 1]]$max)
     }
@@ -109,24 +115,28 @@ predict.deepspat_nn_ST_GP <- function(object, newdata, nn_id, ...) {
   Z_nn <- tf$gather(d$z_tf, nn_id - 1L) %>% tf$reshape(c(npred, m, 1L))
   beta_nn <- beta %>% tf$reshape(c(1L, p, 1L)) %>% tf$tile(c(npred, 1L, 1L))
   
-  A <- tf$matmul(tf$matrix_transpose(K2), tf$matrix_inverse(K1))
+  A <- tf$matmul(tf$linalg$matrix_transpose(K2), tf$matrix_inverse(K1))
   A_Z_Xbeta <- tf$matmul(A, Z_nn - tf$matmul(X_nn, beta_nn)) %>% tf$reshape(c(npred, 1L))
   
   pred_mean <- tf$matmul(X_new, beta) + A_Z_Xbeta
-  pred_var <- (K3 - tf$matmul(tf$matmul(tf$matrix_transpose(K2), tf$matrix_inverse(K1)), K2)) %>% tf$reshape(c(npred, 1L))
+  pred_var <- (K3 - tf$matmul(tf$matmul(tf$linalg$matrix_transpose(K2), tf$matrix_inverse(K1)), K2)) %>% tf$reshape(c(npred, 1L))
   
   pred_95l <- pred_mean - 2*tf$sqrt(pred_var)
   pred_95u <- pred_mean + 2*tf$sqrt(pred_var)
   
   df_pred <- as.data.frame(mmat) %>%
-    mutate(pred_mean = as.vector(d$run(pred_mean)),
-           pred_var = as.vector(d$run(pred_var)),
-           pred_95l = as.vector(d$run(pred_95l)),
-           pred_95u = as.vector(d$run(pred_95u)),
+    mutate(pred_mean = as.vector(pred_mean),
+           pred_var = as.vector(pred_var),
+           pred_95l = as.vector(pred_95l),
+           pred_95u = as.vector(pred_95u),
     )
     
     
-    list(df_pred = df_pred)
+  list(df_pred = df_pred,
+       obs_swarped = as.matrix(obs_swarped),
+       obs_twarped = as.matrix(obs_twarped),
+       newdata_swarped = as.matrix(newdata_swarped),
+       newdata_twarped = as.matrix(newdata_twarped))
   
 
 }

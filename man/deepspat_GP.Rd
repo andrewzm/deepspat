@@ -10,7 +10,7 @@ deepspat_GP(
   g = ~1,
   layers = NULL,
   method = c("REML"),
-  family = c("matern_stat", "matern_nonstat"),
+  family = c("exp_stat", "exp_nonstat", "matern_stat", "matern_nonstat"),
   par_init = initvars(),
   learn_rates = init_learn_rates(),
   nsteps = 150L
@@ -45,6 +45,7 @@ deepspat_GP(
  \item{"layers"}{The warping function layers in the model}
  \item{"Cost"}{The final value of the cost}
  \item{"eta_tf"}{Estimated weights in the warping layers as a list of \code{TensorFlow} objects}
+ \item{"a_tf"}{Estimated parameters in the LFT layers}
  \item{"beta"}{Estimated coefficients of the linear trend}
  \item{"precy_tf"}{Precision of measurement error, as a \code{TensorFlow} object}
  \item{"sigma2_tf"}{Variance parameter in the covariance matrix, as a \code{TensorFlow} object}
@@ -53,7 +54,6 @@ deepspat_GP(
  \item{"scalings"}{Minima and maxima used to scale the unscaled unit outputs for each warping layer, as a list of \code{TensorFlow} objects}
  \item{"method"}{Method used for inference}
  \item{"nlayers"}{Number of warping layers in the model}
- \item{"run"}{\code{TensorFlow} session for evaluating the \code{TensorFlow} objects}
  \item{"swarped_tf"}{Spatial locations on the warped domain}
  \item{"negcost"}{Vector of costs after each gradient-descent evaluation}
  \item{"z_tf"}{Data of the process}
@@ -62,13 +62,4 @@ deepspat_GP(
 }
 \description{
 Constructs a deep compositional spatial model
-}
-\examples{
-df <- data.frame(s1 = rnorm(100), s2 = rnorm(100), z = rnorm(100))
-layers <- c(AWU(r = 50, dim = 1L, grad = 200, lims = c(-0.5, 0.5)))
-\dontrun{d <- deepspat_GP(f = z ~ s1 + s2 - 1,
-                          data = df, g = ~ 1,
-                          layers = layers, method = "REML",
-                          family = "matern_nonstat",
-                          nsteps = 100L)}
 }

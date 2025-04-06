@@ -10,8 +10,9 @@ deepspat_bivar_GP(
   g = ~1,
   layers_asym = NULL,
   layers = NULL,
-  method = c("REML"),
-  family = c("matern_stat_symm", "matern_stat_asymm", "matern_nonstat_symm",
+  method = "REML",
+  family = c("exp_stat_symm", "exp_stat_asymm", "exp_nonstat_symm", "exp_nonstat_asymm",
+    "matern_stat_symm", "matern_stat_asymm", "matern_nonstat_symm",
     "matern_nonstat_asymm"),
   par_init = initvars(),
   learn_rates = init_learn_rates(),
@@ -51,6 +52,8 @@ deepspat_bivar_GP(
  \item{"Cost"}{The final value of the cost}
  \item{"eta_tf"}{Estimated weights in the warping layers as a list of \code{TensorFlow} objects}
  \item{"eta_tf_asym"}{Estimated weights in the aligning layers as a list of \code{TensorFlow} objects}
+ \item{"a_tf"}{Estimated parameters in the LFT layers}
+ \item{"a_tf_asym"}{Estimated parameters in the AFF layers of the aligning function}
  \item{"beta"}{Estimated coefficients of the linear trend}
  \item{"precy_tf1"}{Precision of measurement error of the first process, as a \code{TensorFlow} object}
  \item{"precy_tf2"}{Precision of measurement error of the second process, as a \code{TensorFlow} object}
@@ -68,7 +71,6 @@ deepspat_bivar_GP(
  \item{"method"}{Method used for inference}
  \item{"nlayers"}{Number of warping layers in the model}
  \item{"nlayers_asym"}{Number of aligning layers in the model}
- \item{"run"}{\code{TensorFlow} session for evaluating the \code{TensorFlow} objects}
  \item{"swarped_tf1"}{Spatial locations of the first process on the warped domain}
  \item{"swarped_tf2"}{Spatial locations of the second process on the warped domain}
  \item{"negcost"}{Vector of costs after each gradient-descent evaluation}
@@ -79,13 +81,4 @@ deepspat_bivar_GP(
 }
 \description{
 Constructs a deep bivariate compositional spatial model
-}
-\examples{
-df <- data.frame(s1 = rnorm(100), s2 = rnorm(100), z1 = rnorm(100), z2 = rnorm(100))
-layers <- c(AWU(r = 50, dim = 1L, grad = 200, lims = c(-0.5, 0.5)))
-\dontrun{d <- deepspat_bivar_GP(f = z1 + z2 ~ s1 + s2 - 1,
-                                data = df, g = ~ 1,
-                                layers = layers, method = "REML",
-                                family = "matern_nonstat_symm",
-                                nsteps = 100L)}
 }

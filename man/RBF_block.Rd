@@ -4,7 +4,7 @@
 \alias{RBF_block}
 \title{Radial Basis Function Warpings}
 \usage{
-RBF_block(res = 1L, lims = c(-0.5, 0.5))
+RBF_block(res = 1L, lims = c(-0.5, 0.5), dtype = "float32")
 }
 \arguments{
 \item{res}{the resolution}
@@ -27,7 +27,4 @@ RBF_block(res = 1L, lims = c(-0.5, 0.5))
 Sets up a composition of radial basis functions (RBFs) for used in a deep compositional spatial model. The function
 sets up RBFs on a prescribed domain on a grid at a certain resolution.
 It returns a list containing all the functions in the single-resolution RBF unit. See Value for more details.
-}
-\examples{
-layer <- RBF_block(res = 1L)
 }

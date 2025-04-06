@@ -4,7 +4,7 @@
 \alias{bisquares1D}
 \title{Bisquare functions on a 1D domain}
 \usage{
-bisquares1D(r = 30, lims = c(-0.5, 0.5))
+bisquares1D(r = 30, lims = c(-0.5, 0.5), dtype = "float32")
 }
 \arguments{
 \item{r}{30}
@@ -23,7 +23,4 @@ bisquares1D(r = 30, lims = c(-0.5, 0.5))
 Sets up a top-layer set of bisquare basis functions on a bounded 1D domain of
 length 1 for modelling the process \eqn{Y}. It returns a list of length 1 containing the basis functions and encapsulated
 functions that evaluate the bisquare functions over inputs of different types. See Value for more details.
-}
-\examples{
-layer <- bisquares1D(r = 30, lims = c(-0.5, 0.5))
 }

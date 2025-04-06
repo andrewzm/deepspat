@@ -7,7 +7,7 @@
 deepspat(
   f,
   data,
-  layers,
+  layers = NULL,
   method = c("VB", "ML"),
   par_init = initvars(),
   learn_rates = init_learn_rates(),
@@ -56,10 +56,4 @@ deepspat(
 }
 \description{
 Constructs a deep compositional spatial model
-}
-\examples{
-df <- data.frame(s = rnorm(100), z = rnorm(100))
-layers <- c(AWU(r = 50, dim = 1L, grad = 200, lims = c(-0.5, 0.5)),
-            bisquares1D(r = 50))
-\dontrun{d <- deepspat(f = z ~ s - 1, data = df, layers = layers, method = "ML", nsteps = 100L)}
 }

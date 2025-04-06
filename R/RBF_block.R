@@ -1,17 +1,3 @@
-## Copyright 2019 Andrew Zammit Mangion
-##
-## Licensed under the Apache License, Version 2.0 (the "License");
-## you may not use this file except in compliance with the License.
-## You may obtain a copy of the License at
-##
-## http://www.apache.org/licenses/LICENSE-2.0
-##
-## Unless required by applicable law or agreed to in writing, software
-## distributed under the License is distributed on an "AS IS" BASIS,
-## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-## See the License for the specific language governing permissions and
-## limitations under the License.
-
 #' @title Radial Basis Function Warpings
 #' @description Sets up a composition of radial basis functions (RBFs) for used in a deep compositional spatial model. The function
 #' sets up RBFs on a prescribed domain on a grid at a certain resolution.
@@ -29,61 +15,59 @@
 #'  \item{"name"}{Name of layer}
 #' }
 #' @export
-#' @examples
-#' layer <- RBF_block(res = 1L)
-RBF_block <- function(res = 1L, lims = c(-0.5, 0.5)) {
 
+RBF_block <- function(res = 1L, lims = c(-0.5, 0.5), dtype = "float32") {
+  
   ## Parameters appearing in sigmoid (grad, loc)
   r <- (3^res)^2
   cx1d <- seq(lims[1], lims[2], length.out = sqrt(r))
   cxgrid <- expand.grid(s1 = cx1d, s2 = cx1d) %>% as.matrix()
   a <- 2*(3^res - 1)^2
   theta <- cbind(cxgrid, a)
-  theta_tf <- tf$constant(theta, dtype = "float32")
-
+  theta_tf <- tf$constant(theta, dtype = dtype)
+  
   RBF_list <- list()
-
-
+  
+  
   trans <- function(transeta) {
     tf$exp(-transeta) %>%
-      tf$add(tf$constant(1, dtype = "float32")) %>%
-      tf$reciprocal() %>%
-      tf$multiply(tf$constant(1 + exp(3/2)/2, dtype = "float32")) %>%
-      tf$add(tf$constant(-1, dtype = "float32"))
+      tf$add(tf$constant(1, dtype = dtype)) %>%
+      tf$math$reciprocal() %>%
+      tf$multiply(tf$constant(1 + exp(3/2)/2, dtype = dtype)) %>%
+      tf$add(tf$constant(-1, dtype = dtype))
   }
-
+  
   for(count in 1:r) {
-   ff <- function(count) {
-     j <- count
-
-     f = function(s_tf, eta_tf) {
+    ff <- function(count) {
+      j <- count
+      
+      f = function(s_tf, eta_tf) {
         PHI_tf <- RBF_tf(s_tf, theta_tf[j, , drop = FALSE])
         swarped <-  tf$multiply(PHI_tf, eta_tf)
         sout_tf <- tf$add(swarped, s_tf)
-     }
-
-     fMC = function(s_tf, eta_tf) {
-       PHI_tf <- RBF_tf(s_tf, theta_tf[j, , drop = FALSE])
-       swarped <-  tf$multiply(PHI_tf, eta_tf)
-       sout_tf <- tf$add(swarped, s_tf)
-     }
-
-     fR = function(s, eta) {
-       PHI <- RBF(s, theta[j, , drop = FALSE])
-       swarped <-  PHI*eta
-       sout <- swarped + s
-     }
-     list(f = f, fMC = fMC, fR = fR)
-
-   }
-   RBF_list[[count]] <- list(f = ff(count)$f,
-                             fMC = ff(count)$fMC,
-                             fR = ff(count)$fR,
-                             r = 1L,
-                             trans = trans,
-                             fix_weights = FALSE,
-                             name = "RBF")
+      }
+      
+      fMC = function(s_tf, eta_tf) {
+        PHI_tf <- RBF_tf(s_tf, theta_tf[j, , drop = FALSE])
+        swarped <-  tf$multiply(PHI_tf, eta_tf)
+        sout_tf <- tf$add(swarped, s_tf)
+      }
+      
+      fR = function(s, eta) {
+        PHI <- RBF(s, theta[j, , drop = FALSE])
+        swarped <-  PHI*eta
+        sout <- swarped + s
+      }
+      list(f = f, fMC = fMC, fR = fR)
+      
+    }
+    RBF_list[[count]] <- list(f = ff(count)$f,
+                              fMC = ff(count)$fMC,
+                              fR = ff(count)$fR,
+                              r = 1L,
+                              trans = trans,
+                              fix_weights = FALSE,
+                              name = paste0("RBF", res))
   }
   RBF_list
 }
-

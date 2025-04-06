@@ -17,21 +17,10 @@
 \code{predict.deepspat_GP} returns a list with the following item
 \describe{
  \item{"df_pred"}{Data frame containing the predictions/prediction intervals at the prediction locations}
+ \item{"obs_swarped"}{Observation locations on the warped domain}
+ \item{"newdata_swarped"}{New prediction locations on the warped domain}
  }
 }
 \description{
 Prediction function for the fitted deepspat_GP object
-}
-\examples{
-df <- data.frame(s1 = rnorm(100), s2 = rnorm(100), z = rnorm(100))
-dfnew <- data.frame(s1 = rnorm(20), s2 = rnorm(20))
-layers <- c(AWU(r = 50, dim = 1L, grad = 200, lims = c(-0.5, 0.5)))
-\dontrun{
-\dontrun{d <- deepspat_multivar(f = z ~ s1 + s2 - 1,
-                                data = df, g = ~ 1,
-                                layers = layers, method = "REML",
-                                family = "matern_nonstat",
-                                nsteps = 100L)}
-  pred <- predict.deepspat_GP(d, dfnew)
-}
 }
