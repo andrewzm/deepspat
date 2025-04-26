@@ -127,7 +127,7 @@ deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
                         # transeta_tf.LFTidx = transeta_tf[LFTidx],
                         # s_in = swarped_tf[[nlayers]], # latest warped sites
                         outlayer = layers[[nlayers]], # last layer, bisquares2D
-                        # layers = layers,
+                        layers = layers,
                         # prec_obs = precy_tf,          # precision, measurement error
                         # Seta_tf = Seta_tf,            # exp cov matrix
                         # Qeta_tf = Qeta_tf,            # inv cov matrix
@@ -156,14 +156,7 @@ deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
       traineta_mean = function(loss_fn, var_list) 
         train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$eta_mean))
       # traineta_mean = (tf$optimizers$Adam(learn_rates$eta_mean))$minimize
-    } else if(method == "VB"){
-      traineta_mean = function(loss_fn, var_list) 
-        train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$eta_mean))
-      traineta_sd = function(loss_fn, var_list) 
-        train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$eta_sd))
-      # traineta_mean = (tf$optimizers$Adam(learn_rates$eta_mean))$minimize
-      # traineta_sd = (tf$optimizers$Adam(learn_rates$eta_sd))$minimize
-    }
+    } 
   }
   
   if(nLFTlayers > 0) {
@@ -177,9 +170,7 @@ deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
   
   if(method == "ML") {
     negcostname <- "Likelihood"
-  } else if(method == "VB"){
-    negcostname <- "Lower-bound"
-  }
+  } 
   
   # # -------------------------------------------------------------
 
@@ -188,7 +179,6 @@ deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
   cat("Learning weight parameters... \n")
   for(i in 1:nsteps) {
     if(opt_eta & method == "ML") {traineta_mean(Cost_fn, var_list = transeta_tf[notLFTidx])}
-    if(opt_eta & method == "VB") {traineta_mean(Cost_fn, var_list = MH_tf[notLFTidx])}
     if(nLFTlayers > 0) { trainLFTpars(Cost_fn, var_list = a_tf) }
     thisML <- -Cost_fn()
     if((i %% 10) == 0){
@@ -207,7 +197,6 @@ deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
   # 400 ite for trainLFTpars, trains2y, traincovfun
   cat("Measurement-error variance and cov. fn. parameters... \n")
   for(i in (nsteps + 1):(2 * nsteps)) {
-    if(opt_eta & method == "VB") {traineta_sd(Cost_fn, var_list = logSH_tf[notLFTidx])} # VB
     if(nLFTlayers > 0) { trainLFTpars(Cost_fn, var_list = a_tf) }
     trains2y(Cost_fn, var_list = c(logsigma2y_tf))
     traincovfun(Cost_fn, var_list = c(logl_tf, logsigma2eta2_tf)) 
@@ -223,9 +212,6 @@ deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
   cat("Updating everything... \n")
   for(i in (2*nsteps + 1):(3 * nsteps)) {
     if(opt_eta & method == "ML") {traineta_mean(Cost_fn, var_list = transeta_tf[notLFTidx])}
-    if(opt_eta & method == "VB") {
-      traineta_mean(Cost_fn, var_list = MH_tf[notLFTidx])
-      traineta_sd(Cost_fn, var_list = logSH_tf[notLFTidx])}
     if(nLFTlayers > 0) { trainLFTpars(Cost_fn, var_list = a_tf) }
     trains2y(Cost_fn, var_list = c(logsigma2y_tf))
     traincovfun(Cost_fn, var_list = c(logl_tf, logsigma2eta2_tf)) 
@@ -270,6 +256,7 @@ deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
                       transeta_tf = transeta_tf,
                       a_tf = a_tf,
                       outlayer = layers[[nlayers]],
+                      layers = layers,
                       scalings = scalings,
                       s_tf = s_tf, 
                       z_tf = z_tf,

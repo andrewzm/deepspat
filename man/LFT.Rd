@@ -8,6 +8,8 @@ LFT(a = NULL, dtype = "float32")
 }
 \arguments{
 \item{a}{vector of four complex numbers describing the Möbius transformation}
+
+\item{dtype}{data type}
 }
 \value{
 \code{LFT} returns a list containing a list with the following components:

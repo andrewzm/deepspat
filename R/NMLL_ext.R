@@ -9,7 +9,7 @@
 # tfp <- reticulate::import("tensorflow-probability", delay_load = TRUE)
 
 
-lplike <- function(logphi_tf, logitkappa_tf, transeta_tf, a_tf, scalings, 
+lplike <- function(logphi_tf, logitkappa_tf, transeta_tf, a_tf, scalings, layers, 
                    s_tf, z_tf, ndata, method, family = "nonsta",
                    dtype = "float32",
                    extdep.emp_tf = NULL, 
@@ -119,7 +119,7 @@ lplike <- function(logphi_tf, logitkappa_tf, transeta_tf, a_tf, scalings,
 
 
 # does not work
-ECMSE = function(logphi_tf, logitkappa_tf, transeta_tf, a_tf, scalings, 
+ECMSE = function(logphi_tf, logitkappa_tf, transeta_tf, a_tf, scalings, layers,
                  s_tf, ndata, method, 
                  family = "nonsta", 
                  dtype = "float32",
@@ -182,7 +182,7 @@ ECMSE = function(logphi_tf, logitkappa_tf, transeta_tf, a_tf, scalings,
 
 ################################################################################
 
-GradScore = function(logphi_tf, logitkappa_tf, transeta_tf, a_tf, scalings, 
+GradScore = function(logphi_tf, logitkappa_tf, transeta_tf, a_tf, scalings, layers,
                      s_tf, z_tf, u_tf, loc.pairs_t_tf, ndata, method,
                      risk, weight_fun, dWeight_fun, 
                      family = "nonsta",dtype = "float32") {
@@ -294,229 +294,463 @@ GradScore = function(logphi_tf, logitkappa_tf, transeta_tf, a_tf, scalings,
 }
 
 
-WEIGHTS = function(risk_type, p0 = NULL, weight_type = 1) {
-  if (risk_type == "sum") {
-    if (weight_type == 1) {
-      weight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf; #zdrxuinv_tf = z_tf/u_tf
-        weight_tf = z_tf*(1 - tf$math$exp(1 - rxuinv_tf)) }
-      dWeight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf; zdrxuinv_tf = z_tf/u_tf
-        dWeight_tf = 1 - tf$math$exp(1 - rxuinv_tf) * (1 - zdrxuinv_tf) }
-    } else if (weight_type == 2) { # log
-      weight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf; #zdrxuinv_tf = z_tf/u_tf
-        part1 = tf$math$log(z_tf + 1)
-        weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
-      dWeight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf
-        drxuinv_tf = 1/u_tf
-        part1 = tf$math$log(z_tf + 1)
-        dpart1 = 1/(z_tf + 1)
-        dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
-          part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
-    } else if (weight_type == 3) { #sigmoid
-      weight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf; #zdrxuinv_tf = z_tf/u_tf
-        part1 = tf$sigmoid(0.1*(z_tf - 20))
-        weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
-      dWeight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf
-        drxuinv_tf = 1/u_tf
-        part1 = tf$sigmoid(0.1*(z_tf - 20))
-        dpart1 = 0.1*part1*(1-part1)
-        dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
-          part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
-    } else if (weight_type == 4) { # 
-      weight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf; #zdrxuinv_tf = z_tf/u_tf
-        part1 = tf$where(z_tf > 10,
-                         1-tf$math$exp(-3*(z_tf - 10)/10),
-                         tf$zeros_like(z_tf))
-        weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
-      dWeight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf
-        drxuinv_tf = 1/u_tf
-        part1 = tf$where(z_tf > 10,
-                         1-tf$math$exp(-3*(z_tf - 10)/10),
-                         tf$zeros_like(z_tf))
-        dpart1 = tf$where(z_tf > 10,
-                          (3/10)*tf$math$exp(-3*(z_tf - 10)/10),
-                          tf$zeros_like(z_tf))
-        dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
-          part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
+WEIGHTS = function(risk_type, p0 = NULL, weight_type = 1, dtype = "float32") {
+  weight_fun = function(z_tf, u_tf, p = NULL){
+    if (risk_type == "sum") {
+      if (weight_type == 1) {
+          rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf; #zdrxuinv_tf = z_tf/u_tf
+          weight_tf = z_tf*(1 - tf$math$exp(1 - rxuinv_tf)) 
+      } else if (weight_type == 2) { 
+          rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf; #zdrxuinv_tf = z_tf/u_tf
+          part1 = tf$math$log(z_tf + 1)
+          weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) 
+      } else if (weight_type == 3) { #sigmoid
+          rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf; #zdrxuinv_tf = z_tf/u_tf
+          part1 = tf$sigmoid(0.1*(z_tf - 20))
+          weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) 
+      } else if (weight_type == 4) { # 
+          rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf; #zdrxuinv_tf = z_tf/u_tf
+          part1 = tf$where(z_tf > 10,
+                           1-tf$math$exp(-3*(z_tf - 10)/10),
+                           tf$zeros_like(z_tf))
+          weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) 
+      }
+    } else if (risk_type == "site") {
+        if (weight_type == 1) {
+            rxuinv_tf = z_tf[[1]]/u_tf;
+            weight_tf = z_tf*(1 - tf$math$exp(1 - rxuinv_tf)) 
+        } else if (weight_type == 2) {
+            rxuinv_tf = z_tf[[1]]/u_tf;
+            part1 = tf$math$log(z_tf + 1)
+            weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) 
+        } else if (weight_type == 3) {
+            rxuinv_tf = z_tf[[1]]/u_tf;
+            part1 = tf$sigmoid(0.1*(z_tf - 20))
+            weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) 
+        }  else if (weight_type == 4) {
+            rxuinv_tf = z_tf[[1]]/u_tf;
+            part1 = tf$where(z_tf > 10,
+                             1-tf$math$exp(-3*(z_tf - 10)/10),
+                             tf$zeros_like(z_tf))
+            weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) 
+        }
+    } else if (risk_type == "max") {
+      if (weight_type == 1) {
+          rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20)
+          weight_tf = z_tf*(1 - tf$math$exp(1 - rxuinv_tf)) 
+      } else if (weight_type == 2) {
+          rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20);
+          part1 = tf$math$log(z_tf + 1)
+          weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) 
+      } else if (weight_type == 3) {
+          rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20);
+          part1 = tf$sigmoid(0.1*(z_tf - 20))
+          weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) 
+      } else if (weight_type == 4) {
+          rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20);
+          part1 = tf$where(z_tf > 10,
+                           1-tf$math$exp(-3*(z_tf - 10)/10),
+                           tf$zeros_like(z_tf))
+          weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) 
+      }
+      
+    } else if (risk_type == "sum2") {
+      if (weight_type == 1) {
+          p = p0
+          rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
+          weight_tf = z_tf*(1 - tf$math$exp(1 - rxuinv_tf)) 
+      } else if (weight_type == 2) {
+          p = p0
+          rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
+          part1 = tf$math$log(z_tf + 1)
+          weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) 
+      } else if (weight_type == 3) {
+          p = p0
+          rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
+          part1 = tf$sigmoid(0.1*(z_tf - 20))
+          weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) 
+      } else if (weight_type == 4) {
+          p = p0
+          rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
+          part1 = tf$where(z_tf > 10,
+                           1-tf$math$exp(-3*(z_tf - 10)/10),
+                           tf$zeros_like(z_tf))
+          weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) 
+      }
+    
     }
-
-  } else if (risk_type == "site") {
-    if (weight_type == 1) {
-      weight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = z_tf[[1]]/u_tf;
-        weight_tf = z_tf*(1 - tf$math$exp(1 - rxuinv_tf)) }
-      dWeight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = z_tf[[1]]/u_tf;
-        z_tf_row1 = tf$reshape(z_tf[[1]], c(1L, length(z_tf[[1]])))
-        rest_zeros = tf$zeros(tf$shape(z_tf) - tf$constant(c(1L,0L)), dtype=dtype)
-        zdrxuinv_tf = tf$concat(c(z_tf_row1, rest_zeros), axis = 0L)/u_tf
-        dWeight_tf = 1 - tf$math$exp(1 - rxuinv_tf) * (1 - zdrxuinv_tf) }
-    } else if (weight_type == 2) {
-      weight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = z_tf[[1]]/u_tf;
-        part1 = tf$math$log(z_tf + 1)
-        weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
-      dWeight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = z_tf[[1]]/u_tf;
-        z_tf_row1 = tf$reshape(tf$math$log(z_tf[[1]] + 1), c(1L, length(z_tf[[1]])))
-        rest_zeros = tf$zeros(tf$shape(z_tf) - tf$constant(c(1L,0L)), dtype=dtype)
-        part1drxuinv_tf = tf$concat(c(z_tf_row1, rest_zeros), axis = 0L)/u_tf
-        dpart1 = 1/(z_tf + 1)
-        dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
-          part1drxuinv_tf*tf$math$exp(1 - rxuinv_tf) }
-    } else if (weight_type == 3) {
-      weight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = z_tf[[1]]/u_tf;
-        part1 = tf$sigmoid(0.1*(z_tf - 20))
-        weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
-      dWeight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = z_tf[[1]]/u_tf;
-        part1 = tf$sigmoid(0.1*(z_tf - 20))
-        z_tf_row1 = tf$reshape(part1[[1]], c(1L, length(z_tf[[1]])))
-        rest_zeros = tf$zeros(tf$shape(z_tf) - tf$constant(c(1L,0L)), dtype=dtype)
-        part1drxuinv_tf = tf$concat(c(z_tf_row1, rest_zeros), axis = 0L)/u_tf
-        dpart1 = 0.1*part1*(1-part1)
-        dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
-          part1drxuinv_tf*tf$math$exp(1 - rxuinv_tf) }
-    }  else if (weight_type == 4) {
-      weight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = z_tf[[1]]/u_tf;
-        part1 = tf$where(z_tf > 10,
-                         1-tf$math$exp(-3*(z_tf - 10)/10),
-                         tf$zeros_like(z_tf))
-        weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
-      dWeight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = z_tf[[1]]/u_tf;
-        part1 = tf$where(z_tf > 10,
-                         1-tf$math$exp(-3*(z_tf - 10)/10),
-                         tf$zeros_like(z_tf))
-        z_tf_row1 = tf$reshape(part1[[1]], c(1L, length(z_tf[[1]])))
-        rest_zeros = tf$zeros(tf$shape(z_tf) - tf$constant(c(1L,0L)), dtype=dtype)
-        part1drxuinv_tf = tf$concat(c(z_tf_row1, rest_zeros), axis = 0L)/u_tf
-        dpart1 = tf$where(z_tf > 10,
-                          (3/10)*tf$math$exp(-3*(z_tf - 10)/10),
-                          tf$zeros_like(z_tf))
-        dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
-          part1drxuinv_tf*tf$math$exp(1 - rxuinv_tf) }
-    }
-
-  } else if (risk_type == "max") {
-    if (weight_type == 1) {
-      weight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20)
-        weight_tf = z_tf*(1 - tf$math$exp(1 - rxuinv_tf)) }
-      dWeight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20)
-        drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20-1) * tf$pow(z_tf/u_tf, 19)/u_tf
-        zdrxuinv_tf = z_tf*drxuinv_tf
-        dWeight_tf = 1 - tf$math$exp(1 - rxuinv_tf) * (1 - zdrxuinv_tf) }
-    } else if (weight_type == 2) {
-      weight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20);
-        part1 = tf$math$log(z_tf + 1)
-        weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
-      dWeight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20);
-        drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20-1) * tf$pow(z_tf/u_tf, 19)/u_tf
-        part1 = tf$math$log(z_tf + 1)
-        dpart1 = 1/(z_tf + 1)
-        dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
-          part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
-    } else if (weight_type == 3) {
-      weight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20);
-        part1 = tf$sigmoid(0.1*(z_tf - 20))
-        weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
-      dWeight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20);
-        drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20-1) * tf$pow(z_tf/u_tf, 19)/u_tf
-        part1 = tf$sigmoid(0.1*(z_tf - 20))
-        dpart1 = 0.1*part1*(1-part1)
-        dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
-          part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
-    } else if (weight_type == 4) {
-      weight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20);
-        part1 = tf$where(z_tf > 10,
-                         1-tf$math$exp(-3*(z_tf - 10)/10),
-                         tf$zeros_like(z_tf))
-        weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
-      dWeight_fun = function(z_tf, u_tf) {
-        rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20);
-        drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20-1) * tf$pow(z_tf/u_tf, 19)/u_tf
-        part1 = tf$where(z_tf > 10,
-                         1-tf$math$exp(-3*(z_tf - 10)/10),
-                         tf$zeros_like(z_tf))
-        dpart1 = tf$where(z_tf > 10,
-                          (3/10)*tf$math$exp(-3*(z_tf - 10)/10),
-                          tf$zeros_like(z_tf))
-        dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
-          part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
-    }
-
-  } else if (risk_type == "sum2") {
-    if (weight_type == 1) {
-      weight_fun = function(z_tf, u_tf, p = p0) {
-        rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
-        weight_tf = z_tf*(1 - tf$math$exp(1 - rxuinv_tf)) }
-      dWeight_fun = function(z_tf, u_tf, p = p0) {
-        rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
-        drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p-1) * tf$pow(z_tf/u_tf, p-1)/u_tf
-        zdrxuinv_tf = z_tf*drxuinv_tf
-        dWeight_tf = 1 - tf$math$exp(1 - rxuinv_tf) * (1 - zdrxuinv_tf) }
-    } else if (weight_type == 2) {
-      weight_fun = function(z_tf, u_tf, p = p0) {
-        rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
-        part1 = tf$math$log(z_tf + 1)
-        weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
-      dWeight_fun = function(z_tf, u_tf, p = p0) {
-        rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
-        drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p-1) * tf$pow(z_tf/u_tf, p-1)/u_tf
-        part1 = tf$math$log(z_tf + 1)
-        dpart1 = 1/(z_tf + 1)
-        dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
-          part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
-    } else if (weight_type == 3) {
-      weight_fun = function(z_tf, u_tf, p = p0) {
-        rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
-        part1 = tf$sigmoid(0.1*(z_tf - 20))
-        weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
-      dWeight_fun = function(z_tf, u_tf, p = p0) {
-        rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
-        drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p-1) * tf$pow(z_tf/u_tf, p-1)/u_tf
-        part1 = tf$sigmoid(0.1*(z_tf - 20))
-        dpart1 = 0.1*part1*(1-part1)
-        dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
-          part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
-    } else if (weight_type == 4) {
-      weight_fun = function(z_tf, u_tf, p = p0) {
-        rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
-        part1 = tf$where(z_tf > 10,
-                         1-tf$math$exp(-3*(z_tf - 10)/10),
-                         tf$zeros_like(z_tf))
-        weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
-      dWeight_fun = function(z_tf, u_tf, p = p0) {
-        rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
-        drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p-1) * tf$pow(z_tf/u_tf, p-1)/u_tf
-        part1 = tf$where(z_tf > 10,
-                         1-tf$math$exp(-3*(z_tf - 10)/10),
-                         tf$zeros_like(z_tf))
-        dpart1 = tf$where(z_tf > 10,
-                          (3/10)*tf$math$exp(-3*(z_tf - 10)/10),
-                          tf$zeros_like(z_tf))
-        dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
-          part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
-    }
-
+    
   }
-
+  
+  
+  
+  dWeight_fun = function(z_tf, u_tf, p = NULL){
+    if (risk_type == "sum") {
+      if (weight_type == 1) {
+          rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf; zdrxuinv_tf = z_tf/u_tf
+          dWeight_tf = 1 - tf$math$exp(1 - rxuinv_tf) * (1 - zdrxuinv_tf) 
+      } else if (weight_type == 2) { 
+          rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf
+          drxuinv_tf = 1/u_tf
+          part1 = tf$math$log(z_tf + 1)
+          dpart1 = 1/(z_tf + 1)
+          dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+            part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf 
+      } else if (weight_type == 3) { 
+          rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf
+          drxuinv_tf = 1/u_tf
+          part1 = tf$sigmoid(0.1*(z_tf - 20))
+          dpart1 = 0.1*part1*(1-part1)
+          dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+            part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf 
+      } else if (weight_type == 4) { 
+          rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf
+          drxuinv_tf = 1/u_tf
+          part1 = tf$where(z_tf > 10,
+                           1-tf$math$exp(-3*(z_tf - 10)/10),
+                           tf$zeros_like(z_tf))
+          dpart1 = tf$where(z_tf > 10,
+                            (3/10)*tf$math$exp(-3*(z_tf - 10)/10),
+                            tf$zeros_like(z_tf))
+          dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+            part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf 
+      }
+      
+    } else if (risk_type == "site") {
+      if (weight_type == 1) {
+          rxuinv_tf = z_tf[[1]]/u_tf;
+          z_tf_row1 = tf$reshape(z_tf[[1]], c(1L, length(z_tf[[1]])))
+          rest_zeros = tf$zeros(tf$shape(z_tf) - tf$constant(c(1L,0L)), dtype=dtype)
+          zdrxuinv_tf = tf$concat(c(z_tf_row1, rest_zeros), axis = 0L)/u_tf
+          dWeight_tf = 1 - tf$math$exp(1 - rxuinv_tf) * (1 - zdrxuinv_tf) 
+      } else if (weight_type == 2) {
+          rxuinv_tf = z_tf[[1]]/u_tf;
+          z_tf_row1 = tf$reshape(tf$math$log(z_tf[[1]] + 1), c(1L, length(z_tf[[1]])))
+          rest_zeros = tf$zeros(tf$shape(z_tf) - tf$constant(c(1L,0L)), dtype=dtype)
+          part1drxuinv_tf = tf$concat(c(z_tf_row1, rest_zeros), axis = 0L)/u_tf
+          dpart1 = 1/(z_tf + 1)
+          dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+            part1drxuinv_tf*tf$math$exp(1 - rxuinv_tf) 
+      } else if (weight_type == 3) {
+          rxuinv_tf = z_tf[[1]]/u_tf;
+          part1 = tf$sigmoid(0.1*(z_tf - 20))
+          z_tf_row1 = tf$reshape(part1[[1]], c(1L, length(z_tf[[1]])))
+          rest_zeros = tf$zeros(tf$shape(z_tf) - tf$constant(c(1L,0L)), dtype=dtype)
+          part1drxuinv_tf = tf$concat(c(z_tf_row1, rest_zeros), axis = 0L)/u_tf
+          dpart1 = 0.1*part1*(1-part1)
+          dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+            part1drxuinv_tf*tf$math$exp(1 - rxuinv_tf) 
+      }  else if (weight_type == 4) {
+          rxuinv_tf = z_tf[[1]]/u_tf;
+          part1 = tf$where(z_tf > 10,
+                           1-tf$math$exp(-3*(z_tf - 10)/10),
+                           tf$zeros_like(z_tf))
+          z_tf_row1 = tf$reshape(part1[[1]], c(1L, length(z_tf[[1]])))
+          rest_zeros = tf$zeros(tf$shape(z_tf) - tf$constant(c(1L,0L)), dtype=dtype)
+          part1drxuinv_tf = tf$concat(c(z_tf_row1, rest_zeros), axis = 0L)/u_tf
+          dpart1 = tf$where(z_tf > 10,
+                            (3/10)*tf$math$exp(-3*(z_tf - 10)/10),
+                            tf$zeros_like(z_tf))
+          dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+            part1drxuinv_tf*tf$math$exp(1 - rxuinv_tf)
+      }
+      
+    } else if (risk_type == "max") {
+      if (weight_type == 1) {
+          rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20)
+          drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20-1) * tf$pow(z_tf/u_tf, 19)/u_tf
+          zdrxuinv_tf = z_tf*drxuinv_tf
+          dWeight_tf = 1 - tf$math$exp(1 - rxuinv_tf) * (1 - zdrxuinv_tf) 
+      } else if (weight_type == 2) {
+          rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20);
+          drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20-1) * tf$pow(z_tf/u_tf, 19)/u_tf
+          part1 = tf$math$log(z_tf + 1)
+          dpart1 = 1/(z_tf + 1)
+          dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+            part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf 
+      } else if (weight_type == 3) {
+          rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20);
+          drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20-1) * tf$pow(z_tf/u_tf, 19)/u_tf
+          part1 = tf$sigmoid(0.1*(z_tf - 20))
+          dpart1 = 0.1*part1*(1-part1)
+          dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+            part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf 
+      } else if (weight_type == 4) {
+          rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20);
+          drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20-1) * tf$pow(z_tf/u_tf, 19)/u_tf
+          part1 = tf$where(z_tf > 10,
+                           1-tf$math$exp(-3*(z_tf - 10)/10),
+                           tf$zeros_like(z_tf))
+          dpart1 = tf$where(z_tf > 10,
+                            (3/10)*tf$math$exp(-3*(z_tf - 10)/10),
+                            tf$zeros_like(z_tf))
+          dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+            part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf 
+      }
+      
+    } else if (risk_type == "sum2") {
+      if (weight_type == 1) {
+          p = p0
+          rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
+          drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p-1) * tf$pow(z_tf/u_tf, p-1)/u_tf
+          zdrxuinv_tf = z_tf*drxuinv_tf
+          dWeight_tf = 1 - tf$math$exp(1 - rxuinv_tf) * (1 - zdrxuinv_tf)
+      } else if (weight_type == 2) {
+          p = p0
+          rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
+          drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p-1) * tf$pow(z_tf/u_tf, p-1)/u_tf
+          part1 = tf$math$log(z_tf + 1)
+          dpart1 = 1/(z_tf + 1)
+          dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+            part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf 
+      } else if (weight_type == 3) {
+          p = p0
+          rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
+          drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p-1) * tf$pow(z_tf/u_tf, p-1)/u_tf
+          part1 = tf$sigmoid(0.1*(z_tf - 20))
+          dpart1 = 0.1*part1*(1-part1)
+          dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+            part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf 
+      } else if (weight_type == 4) {
+          p = p0
+          rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
+          drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p-1) * tf$pow(z_tf/u_tf, p-1)/u_tf
+          part1 = tf$where(z_tf > 10,
+                           1-tf$math$exp(-3*(z_tf - 10)/10),
+                           tf$zeros_like(z_tf))
+          dpart1 = tf$where(z_tf > 10,
+                            (3/10)*tf$math$exp(-3*(z_tf - 10)/10),
+                            tf$zeros_like(z_tf))
+          dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+            part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf 
+      } 
+    }
+  }
+  
   list(weight_fun = weight_fun, dWeight_fun = dWeight_fun)
+  
+  
+  #if (risk_type == "sum") {
+  #  if (weight_type == 1) {
+  #    weight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf; #zdrxuinv_tf = z_tf/u_tf
+  #      weight_tf = z_tf*(1 - tf$math$exp(1 - rxuinv_tf)) }
+  #    dWeight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf; zdrxuinv_tf = z_tf/u_tf
+  #      dWeight_tf = 1 - tf$math$exp(1 - rxuinv_tf) * (1 - zdrxuinv_tf) }
+  #  } else if (weight_type == 2) { # log
+  #    weight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf; #zdrxuinv_tf = z_tf/u_tf
+  #      part1 = tf$math$log(z_tf + 1)
+  #      weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
+  #    dWeight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf
+  #      drxuinv_tf = 1/u_tf
+  #      part1 = tf$math$log(z_tf + 1)
+  #      dpart1 = 1/(z_tf + 1)
+  #      dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+  #        part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
+  #  } else if (weight_type == 3) { #sigmoid
+  #    weight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf; #zdrxuinv_tf = z_tf/u_tf
+  #      part1 = tf$sigmoid(0.1*(z_tf - 20))
+  #      weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
+  #    dWeight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf
+  #      drxuinv_tf = 1/u_tf
+  #      part1 = tf$sigmoid(0.1*(z_tf - 20))
+  #      dpart1 = 0.1*part1*(1-part1)
+  #      dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+  #        part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
+  #  } else if (weight_type == 4) { # 
+  #    weight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf; #zdrxuinv_tf = z_tf/u_tf
+  #      part1 = tf$where(z_tf > 10,
+  #                       1-tf$math$exp(-3*(z_tf - 10)/10),
+  #                       tf$zeros_like(z_tf))
+  #      weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
+  #    dWeight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = tf$reduce_sum(z_tf, 0L)/u_tf
+  #      drxuinv_tf = 1/u_tf
+  #      part1 = tf$where(z_tf > 10,
+  #                       1-tf$math$exp(-3*(z_tf - 10)/10),
+  #                       tf$zeros_like(z_tf))
+  #      dpart1 = tf$where(z_tf > 10,
+  #                        (3/10)*tf$math$exp(-3*(z_tf - 10)/10),
+  #                        tf$zeros_like(z_tf))
+  #      dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+  #        part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
+  #  }
+#
+  #} else if (risk_type == "site") {
+  #  if (weight_type == 1) {
+  #    weight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = z_tf[[1]]/u_tf;
+  #      weight_tf = z_tf*(1 - tf$math$exp(1 - rxuinv_tf)) }
+  #    dWeight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = z_tf[[1]]/u_tf;
+  #      z_tf_row1 = tf$reshape(z_tf[[1]], c(1L, length(z_tf[[1]])))
+  #      rest_zeros = tf$zeros(tf$shape(z_tf) - tf$constant(c(1L,0L)), dtype=dtype)
+  #      zdrxuinv_tf = tf$concat(c(z_tf_row1, rest_zeros), axis = 0L)/u_tf
+  #      dWeight_tf = 1 - tf$math$exp(1 - rxuinv_tf) * (1 - zdrxuinv_tf) }
+  #  } else if (weight_type == 2) {
+  #    weight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = z_tf[[1]]/u_tf;
+  #      part1 = tf$math$log(z_tf + 1)
+  #      weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
+  #    dWeight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = z_tf[[1]]/u_tf;
+  #      z_tf_row1 = tf$reshape(tf$math$log(z_tf[[1]] + 1), c(1L, length(z_tf[[1]])))
+  #      rest_zeros = tf$zeros(tf$shape(z_tf) - tf$constant(c(1L,0L)), dtype=dtype)
+  #      part1drxuinv_tf = tf$concat(c(z_tf_row1, rest_zeros), axis = 0L)/u_tf
+  #      dpart1 = 1/(z_tf + 1)
+  #      dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+  #        part1drxuinv_tf*tf$math$exp(1 - rxuinv_tf) }
+  #  } else if (weight_type == 3) {
+  #    weight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = z_tf[[1]]/u_tf;
+  #      part1 = tf$sigmoid(0.1*(z_tf - 20))
+  #      weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
+  #    dWeight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = z_tf[[1]]/u_tf;
+  #      part1 = tf$sigmoid(0.1*(z_tf - 20))
+  #      z_tf_row1 = tf$reshape(part1[[1]], c(1L, length(z_tf[[1]])))
+  #      rest_zeros = tf$zeros(tf$shape(z_tf) - tf$constant(c(1L,0L)), dtype=dtype)
+  #      part1drxuinv_tf = tf$concat(c(z_tf_row1, rest_zeros), axis = 0L)/u_tf
+  #      dpart1 = 0.1*part1*(1-part1)
+  #      dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+  #        part1drxuinv_tf*tf$math$exp(1 - rxuinv_tf) }
+  #  }  else if (weight_type == 4) {
+  #    weight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = z_tf[[1]]/u_tf;
+  #      part1 = tf$where(z_tf > 10,
+  #                       1-tf$math$exp(-3*(z_tf - 10)/10),
+  #                       tf$zeros_like(z_tf))
+  #      weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
+  #    dWeight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = z_tf[[1]]/u_tf;
+  #      part1 = tf$where(z_tf > 10,
+  #                       1-tf$math$exp(-3*(z_tf - 10)/10),
+  #                       tf$zeros_like(z_tf))
+  #      z_tf_row1 = tf$reshape(part1[[1]], c(1L, length(z_tf[[1]])))
+  #      rest_zeros = tf$zeros(tf$shape(z_tf) - tf$constant(c(1L,0L)), dtype=dtype)
+  #      part1drxuinv_tf = tf$concat(c(z_tf_row1, rest_zeros), axis = 0L)/u_tf
+  #      dpart1 = tf$where(z_tf > 10,
+  #                        (3/10)*tf$math$exp(-3*(z_tf - 10)/10),
+  #                        tf$zeros_like(z_tf))
+  #      dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+  #        part1drxuinv_tf*tf$math$exp(1 - rxuinv_tf) }
+  #  }
+#
+  #} else if (risk_type == "max") {
+  #  if (weight_type == 1) {
+  #    weight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20)
+  #      weight_tf = z_tf*(1 - tf$math$exp(1 - rxuinv_tf)) }
+  #    dWeight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20)
+  #      drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20-1) * tf$pow(z_tf/u_tf, 19)/u_tf
+  #      zdrxuinv_tf = z_tf*drxuinv_tf
+  #      dWeight_tf = 1 - tf$math$exp(1 - rxuinv_tf) * (1 - zdrxuinv_tf) }
+  #  } else if (weight_type == 2) {
+  #    weight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20);
+  #      part1 = tf$math$log(z_tf + 1)
+  #      weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
+  #    dWeight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20);
+  #      drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20-1) * tf$pow(z_tf/u_tf, 19)/u_tf
+  #      part1 = tf$math$log(z_tf + 1)
+  #      dpart1 = 1/(z_tf + 1)
+  #      dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+  #        part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
+  #  } else if (weight_type == 3) {
+  #    weight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20);
+  #      part1 = tf$sigmoid(0.1*(z_tf - 20))
+  #      weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
+  #    dWeight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20);
+  #      drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20-1) * tf$pow(z_tf/u_tf, 19)/u_tf
+  #      part1 = tf$sigmoid(0.1*(z_tf - 20))
+  #      dpart1 = 0.1*part1*(1-part1)
+  #      dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+  #        part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
+  #  } else if (weight_type == 4) {
+  #    weight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20);
+  #      part1 = tf$where(z_tf > 10,
+  #                       1-tf$math$exp(-3*(z_tf - 10)/10),
+  #                       tf$zeros_like(z_tf))
+  #      weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
+  #    dWeight_fun = function(z_tf, u_tf, p = NULL) {
+  #      rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20);
+  #      drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, 20), 0L), 1/20-1) * tf$pow(z_tf/u_tf, 19)/u_tf
+  #      part1 = tf$where(z_tf > 10,
+  #                       1-tf$math$exp(-3*(z_tf - 10)/10),
+  #                       tf$zeros_like(z_tf))
+  #      dpart1 = tf$where(z_tf > 10,
+  #                        (3/10)*tf$math$exp(-3*(z_tf - 10)/10),
+  #                        tf$zeros_like(z_tf))
+  #      dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+  #        part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
+  #  }
+#
+  #} else if (risk_type == "sum2") {
+  #  if (weight_type == 1) {
+  #    weight_fun = function(z_tf, u_tf, p = p0) {
+  #      rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
+  #      weight_tf = z_tf*(1 - tf$math$exp(1 - rxuinv_tf)) }
+  #    dWeight_fun = function(z_tf, u_tf, p = p0) {
+  #      rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
+  #      drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p-1) * tf$pow(z_tf/u_tf, p-1)/u_tf
+  #      zdrxuinv_tf = z_tf*drxuinv_tf
+  #      dWeight_tf = 1 - tf$math$exp(1 - rxuinv_tf) * (1 - zdrxuinv_tf) }
+  #  } else if (weight_type == 2) {
+  #    weight_fun = function(z_tf, u_tf, p = p0) {
+  #      rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
+  #      part1 = tf$math$log(z_tf + 1)
+  #      weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
+  #    dWeight_fun = function(z_tf, u_tf, p = p0) {
+  #      rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
+  #      drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p-1) * tf$pow(z_tf/u_tf, p-1)/u_tf
+  #      part1 = tf$math$log(z_tf + 1)
+  #      dpart1 = 1/(z_tf + 1)
+  #      dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+  #        part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
+  #  } else if (weight_type == 3) {
+  #    weight_fun = function(z_tf, u_tf, p = p0) {
+  #      rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
+  #      part1 = tf$sigmoid(0.1*(z_tf - 20))
+  #      weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
+  #    dWeight_fun = function(z_tf, u_tf, p = p0) {
+  #      rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
+  #      drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p-1) * tf$pow(z_tf/u_tf, p-1)/u_tf
+  #      part1 = tf$sigmoid(0.1*(z_tf - 20))
+  #      dpart1 = 0.1*part1*(1-part1)
+  #      dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+  #        part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
+  #  } else if (weight_type == 4) {
+  #    weight_fun = function(z_tf, u_tf, p = p0) {
+  #      rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
+  #      part1 = tf$where(z_tf > 10,
+  #                       1-tf$math$exp(-3*(z_tf - 10)/10),
+  #                       tf$zeros_like(z_tf))
+  #      weight_tf = part1*(1 - tf$math$exp(1 - rxuinv_tf)) }
+  #    dWeight_fun = function(z_tf, u_tf, p = p0) {
+  #      rxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p)
+  #      drxuinv_tf = tf$pow(tf$reduce_sum(tf$pow(z_tf/u_tf, p), 0L), 1/p-1) * tf$pow(z_tf/u_tf, p-1)/u_tf
+  #      part1 = tf$where(z_tf > 10,
+  #                       1-tf$math$exp(-3*(z_tf - 10)/10),
+  #                       tf$zeros_like(z_tf))
+  #      dpart1 = tf$where(z_tf > 10,
+  #                        (3/10)*tf$math$exp(-3*(z_tf - 10)/10),
+  #                        tf$zeros_like(z_tf))
+  #      dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
+  #        part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
+  #  }
+  #
+  #}
+
 }
 

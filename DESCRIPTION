@@ -16,7 +16,7 @@ Description: Deep compositional spatial models are standard spatial covariance
 	     Estimation and inference is done using TensorFlow, which makes use of 
              graphics processing units. 
 License: Apache License 2.0
-Imports: data.table, dplyr, Matrix, methods, reticulate, tensorflow
+Imports: data.table, dplyr, Matrix, methods, reticulate, keras, tensorflow, tfprobability, evd, SpatialExtremes, fields
 SystemRequirements: TensorFlow (https://www.tensorflow.org/),
 Encoding: UTF-8
 RoxygenNote: 7.3.2

@@ -4,6 +4,7 @@
 #' functions that evaluate the bisquare functions over inputs of different types. See Value for more details.
 #' @param r 30
 #' @param lims the limits of one side of the square bounded 2D domain on which to set up the bisquare functions
+#' @param dtype data type
 #' @return \code{bisquares1D} returns a list containing a list with the following components:
 #' \describe{
 #'  \item{"f"}{An encapsulated function that takes an input and evaluates the sigmoids over the \code{dim}-th dimension using \code{TensorFlow}}
@@ -48,6 +49,7 @@ bisquares1D <- function(r = 30, lims = c(-0.5, 0.5), dtype = "float32") {
 #' functions that evaluate the bisquare functions over inputs of different types. See Value for more details.
 #' @param r 30
 #' @param lims the bounded 1D domain on which to set up the bisquare functions
+#' @param dtype data type
 #' @return \code{bisquares1D} returns a list containing a list with the following components:
 #' \describe{
 #'  \item{"f"}{An encapsulated function that takes an input and evaluates the sigmoids over the \code{dim}-th dimension using \code{TensorFlow}}

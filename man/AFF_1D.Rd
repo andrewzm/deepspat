@@ -8,6 +8,8 @@ AFF_1D(a = c(0, 1), dtype = "float32")
 }
 \arguments{
 \item{a}{vector of two real numbers describing an affine transformation on a 1D domain}
+
+\item{dtype}{data type}
 }
 \value{
 \code{AFF_1D} returns a list containing a list with the following components:

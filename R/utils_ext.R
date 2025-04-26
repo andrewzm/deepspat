@@ -26,7 +26,7 @@ fit_GPD = function(data, q = 0.95) {
   for (i in 1:nrow(data)) {
     # print(i)
     thr <- as.numeric(quantile(data[i,], probs = q))
-    fitGP <- evd::fpot(
+    fitGP <- fpot(
       data[i,],
       threshold = thr,
       std.err = FALSE,
@@ -82,7 +82,6 @@ emp_extdep_est = function(data, coord, model,
                           risk=NULL, q=NULL, q1=NULL,
                           exceed_id = NULL, unitP = T) {
   if (model == "MSP-BR") {
-    library(SpatialExtremes)
     fmad <- fmadogram(data = t(data), coord = coord)
 
     distances = fmad[,1]

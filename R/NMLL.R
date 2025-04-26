@@ -22,7 +22,7 @@
 
 # Seta_tf, Qeta_tf transeta_tf.notLFTidx, transeta_tf.LFTidx, s_in, 
 # a_tf = layers[[LFTidx]]$pars
-logmarglik2 <- function(outlayer, logsigma2y_tf, logl_tf, logsigma2eta2_tf, transeta_tf, 
+logmarglik2 <- function(outlayer, layers, logsigma2y_tf, logl_tf, logsigma2eta2_tf, transeta_tf, 
                         a_tf, scalings, s_tf, z_tf, ndata) {
   ## 
   # ----------------------------------------------------------------------------

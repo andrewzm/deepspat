@@ -14,6 +14,8 @@ AWU(r = 50L, dim = 1L, grad = 200, lims = c(-0.5, 0.5), dtype = "float32")
 \item{grad}{steepness of the sigmoid functions}
 
 \item{lims}{the bounded 1D domain on which to set up the sigmoids}
+
+\item{dtype}{data type}
 }
 \value{
 \code{AWU} returns a list containing a list with the following components:

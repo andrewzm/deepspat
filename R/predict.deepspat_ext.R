@@ -14,7 +14,7 @@
 #' }
 #' @export
 
-predict.deepspat_ext <- function(object, newdata, family, dtype = "float32", ...) {
+predict.deepspat_ext <- function(object, newdata, family, dtype = "float32") {
 
   d <- object
   mmat <- model.matrix(update(d$f, NULL ~ .), newdata)

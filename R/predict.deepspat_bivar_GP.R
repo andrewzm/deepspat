@@ -146,7 +146,7 @@ predict.deepspat_bivar_GP <- function(object, newdata, ...) {
   }
   
   # cov_matern_tf
-  if (family %in% c("matern_stat_symm",
+  if (d$family %in% c("matern_stat_symm",
                     "matern_stat_asymm",
                     "matern_nonstat_symm",
                     "matern_nonstat_asymm")) {
@@ -174,7 +174,7 @@ predict.deepspat_bivar_GP <- function(object, newdata, ...) {
   }
   
   # exp cov fn
-  if (family %in% c("exp_stat_symm",
+  if (d$family %in% c("exp_stat_symm",
                     "exp_stat_asymm",
                     "exp_nonstat_symm",
                     "exp_nonstat_asymm")) {

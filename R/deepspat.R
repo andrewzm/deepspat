@@ -5,14 +5,18 @@
 #' The package implements two cases; first, when these functions are known up to some weights that need to be estimated, and, second,
 #' when the weights in each layer are random. Estimation and inference is done using TensorFlow, which makes use of graphical processing
 #' units.
-#' @name deepspat-package
-#' @docType package
+#' @name deepspat
 #' @import dplyr
-#' @import Matrix
 #' @import reticulate
 #' @import tensorflow
+#' @import tfprobability
+#' @import SpatialExtremes
+#' @importFrom Matrix crossprod tcrossprod colSums
 #' @importFrom data.table rbindlist
 #' @importFrom methods is
-#' @importFrom dplyr %>%
-#' @importFrom stats dist model.matrix var qnorm pnorm runif terms update quantile
-#' @importFrom utils str
+#' @importFrom stats dist model.matrix var qnorm pnorm runif terms quantile update ecdf
+#' @importFrom utils str globalVariables
+#' @importFrom evd fpot
+#' @importFrom fields rdist
+#' @importFrom keras zip_lists
+"_PACKAGE"

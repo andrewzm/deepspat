@@ -11,6 +11,8 @@
 
 \item{newdata}{data frame containing the prediction locations}
 
+\item{nn_id}{nearest neighbors index}
+
 \item{...}{currently unused}
 }
 \value{

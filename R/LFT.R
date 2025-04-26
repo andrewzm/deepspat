@@ -1,6 +1,7 @@
 #' @title LFT (Möbius transformation)
 #' @description Sets up a Möbius transformation unit
 #' @param a vector of four complex numbers describing the Möbius transformation
+#' @param dtype data type
 #' @return \code{LFT} returns a list containing a list with the following components:
 #' \describe{
 #'  \item{"f"}{An encapsulated function that takes an input and evaluates the Möbius transformation using \code{TensorFlow}}

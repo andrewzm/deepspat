@@ -10,6 +10,8 @@ RBF_block(res = 1L, lims = c(-0.5, 0.5), dtype = "float32")
 \item{res}{the resolution}
 
 \item{lims}{the limits of one side of the square 2D domain on which to set up the RBFs}
+
+\item{dtype}{data type}
 }
 \value{
 \code{RBF_block} returns a list containing a list for each RBF in the block with the following components:

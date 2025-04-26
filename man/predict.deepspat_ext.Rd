@@ -4,7 +4,7 @@
 \alias{predict.deepspat_ext}
 \title{Deep compositional spatial model for extremes}
 \usage{
-\method{predict}{deepspat_ext}(object, newdata, family, dtype = "float32", ...)
+\method{predict}{deepspat_ext}(object, newdata, family, dtype = "float32")
 }
 \arguments{
 \item{object}{a deepspat object obtained from fitting a deep compositional spatial model for extremes.}

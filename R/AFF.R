@@ -1,6 +1,7 @@
 #' @title Affine transformation on a 1D domain
 #' @description Sets up an affine transformation on a 1D domain
 #' @param a vector of two real numbers describing an affine transformation on a 1D domain
+#' @param dtype data type
 #' @return \code{AFF_1D} returns a list containing a list with the following components:
 #' \describe{
 #'  \item{"f"}{An encapsulated function that takes an input and evaluates the affine transformation using \code{TensorFlow}}
@@ -51,6 +52,7 @@ AFF_1D <- function(a = c(0, 1), dtype = "float32") {
 #' @title Affine transformation on a 2D domain
 #' @description Sets up an affine transformation on a 2D domain
 #' @param a vector of six real numbers describing an affine transformation on a 2D domain
+#' @param dtype data type
 #' @return \code{AFF_2D} returns a list containing a list with the following components:
 #' \describe{
 #'  \item{"f"}{An encapsulated function that takes an input and evaluates the affine transformation using \code{TensorFlow}}
