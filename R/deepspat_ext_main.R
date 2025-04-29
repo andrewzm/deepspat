@@ -459,11 +459,11 @@ deepspat_ext <- function(f, data,
     eta_tf <- swarped_tf <- list()
     swarped_tf[[1]] <- s_tf
     if(nlayers > 1) for(i in 1:nlayers) {
-      eta_tf[[i]] <- layers[[i]]$trans(transeta_tf[[i]]) # ensure positivity for some variables
       if (layers[[i]]$name == "LFT") {
         a_inum_tf = layers[[i]]$trans(a_tf)
         swarped_tf[[i + 1]] <- layers[[i]]$f(swarped_tf[[i]], a_inum_tf)
       } else {
+        eta_tf[[i]] <- layers[[i]]$trans(transeta_tf[[i]]) # ensure positivity for some variables
         swarped_tf[[i + 1]] <- layers[[i]]$f(swarped_tf[[i]], eta_tf[[i]])
       }
       # swarped_tf[[i + 1]] <- layers[[i]]$f(swarped_tf[[i]], eta_tf[[i]]) # eta_tf[[i]] is useless when i = 12, i.e., LFTidx
