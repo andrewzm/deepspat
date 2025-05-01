@@ -244,7 +244,7 @@ deepspat_ext <- function(f, data,
       }
     }
 
-    alpha = 1
+    # alpha = 1
     ###############################################################################################
     if (method == "EC") {
       extdep.emp_tf = tf$constant(extdep.emp, dtype=dtype)
@@ -265,9 +265,9 @@ deepspat_ext <- function(f, data,
                         extdep.emp_tf = extdep.emp_tf,
                         sel.pairs_tf = sel.pairs_tf)
         Cost = EC_MSE$Cost
-        if (nRBF2layers > 0) {
-          for (i in RBF2idx) { Cost=Cost+alpha*tf$pow(layers[[i]]$trans(transeta_tf[[i]]), 2) }
-        }
+        # if (nRBF2layers > 0) {
+        #   for (i in RBF2idx) { Cost=Cost+alpha*tf$pow(layers[[i]]$trans(transeta_tf[[i]]), 2) }
+        # }
         Cost
       }
 
@@ -289,9 +289,9 @@ deepspat_ext <- function(f, data,
                        extdep.emp_tf = extdep.emp_tf,
                        sel.pairs_tf = sel.pairs_tf)
         Cost = NMLL$Cost
-        if (nRBF2layers > 0) {
-          for (i in RBF2idx) { Cost=Cost+alpha*tf$pow(layers[[i]]$trans(transeta_tf[[i]]), 2) }
-        }
+        # if (nRBF2layers > 0) {
+        #   for (i in RBF2idx) { Cost=Cost+alpha*tf$pow(layers[[i]]$trans(transeta_tf[[i]]), 2) }
+        # }
         Cost
       }
 
@@ -321,9 +321,9 @@ deepspat_ext <- function(f, data,
                           weight_fun = weight_fun,
                           dWeight_fun = dWeight_fun)
         Cost = NMLL$Cost
-        if (nRBF2layers > 0) {
-          for (i in RBF2idx) { Cost=Cost+alpha*tf$pow(layers[[i]]$trans(transeta_tf[[i]]), 2) }
-        }
+        # if (nRBF2layers > 0) {
+        #   for (i in RBF2idx) { Cost=Cost+alpha*tf$pow(layers[[i]]$trans(transeta_tf[[i]]), 2) }
+        # }
         Cost
       }
 
