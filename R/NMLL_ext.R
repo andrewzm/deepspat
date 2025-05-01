@@ -1,5 +1,6 @@
 lplike <- function(logphi_tf, logitkappa_tf,
-                   s_tf, z_tf, ndata, method, family = "nonsta", dtype,
+                   s_tf, z_tf, ndata, method, family = "nonsta", 
+                   dtype = "float32",
                    layers = NULL, transeta_tf = NULL,
                    a_tf = NULL, scalings = NULL,
                    extdep.emp_tf = NULL, sel.pairs_tf = NULL) {
@@ -106,7 +107,8 @@ lplike <- function(logphi_tf, logitkappa_tf,
 
 ################################################################################
 ECMSE = function(logphi_tf, logitkappa_tf,
-                 s_tf, ndata, method, dtype,
+                 s_tf, ndata, method, 
+                 dtype = "float32",
                  family = "nonsta",
                  weight_type = c("constant", "distance", "dependence"),
                  layers = NULL, transeta_tf = NULL,
@@ -171,7 +173,8 @@ ECMSE = function(logphi_tf, logitkappa_tf,
 
 GradScore = function(logphi_tf, logitkappa_tf,
                      s_tf, z_tf, u_tf,
-                     loc.pairs_t_tf, ndata, method, dtype,
+                     loc.pairs_t_tf, ndata, method, 
+                     dtype = "float32",
                      layers = NULL, transeta_tf = NULL,
                      a_tf = NULL, scalings = NULL,
                      risk, weight_fun, dWeight_fun, family = "nonsta") {

@@ -261,6 +261,7 @@ deepspat_ext <- function(f, data,
                         s_tf = s_tf,
                         ndata = ndata,
                         method = method,
+                        dtype = dtype,
                         weight_type = "dependence",
                         extdep.emp_tf = extdep.emp_tf,
                         sel.pairs_tf = sel.pairs_tf)
@@ -286,6 +287,7 @@ deepspat_ext <- function(f, data,
                        z_tf = z_tf,
                        ndata = ndata,
                        method = method,
+                       dtype = dtype,
                        extdep.emp_tf = extdep.emp_tf,
                        sel.pairs_tf = sel.pairs_tf)
         Cost = NMLL$Cost
