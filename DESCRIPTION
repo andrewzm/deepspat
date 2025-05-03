@@ -1,7 +1,7 @@
 Package: deepspat
 Type: Package
 Title: Deep Compositional Spatial Models
-Date: April 2025
+Date: May 2025
 Version: 0.3.0
 Author: Andrew Zammit-Mangion and Quan Vu and Xuanjie Shao
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>

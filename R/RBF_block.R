@@ -16,7 +16,10 @@
 #'  \item{"name"}{Name of layer}
 #' }
 #' @export
-
+#' @examples
+#' \dontrun{
+#' layer <- RBF_block(res = 1L)
+#' }
 RBF_block <- function(res = 1L, lims = c(-0.5, 0.5), dtype = "float32") {
   
   ## Parameters appearing in sigmoid (grad, loc)

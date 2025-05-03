@@ -27,3 +27,8 @@ LFT(a = NULL, dtype = "float32")
 \description{
 Sets up a Möbius transformation unit
 }
+\examples{
+\dontrun{
+layer <- LFT()
+}
+}

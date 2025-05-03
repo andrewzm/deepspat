@@ -14,7 +14,10 @@
 #'  \item{"pars"}{List of parameters describing the Möbius transformation as \code{TensorFlow} objects}
 #' }
 #' @export
-
+#' @examples
+#' \dontrun{
+#' layer <- LFT()
+#' }
 LFT <- function(a = NULL, dtype = "float32") {
   
   if(is.null(a)) {
