@@ -1,9 +1,13 @@
 Package: deepspat
 Type: Package
 Title: Deep Compositional Spatial Models
-Date: May 2025
+Date: 2025-05-16
 Version: 0.3.0
-Author: Andrew Zammit-Mangion and Quan Vu and Xuanjie Shao
+Authors@R: c(person(given = "Andrew", family = "Zammit-Mangion", role = c("aut", "cre"), 
+             email = "andrewzm@gmail.com"),
+             person(given = "Quan", family = "Vu", role = "aut"),
+             person(given = "Xuanjie", family = "Shao", role = "aut")
+             )
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
 Description: Deep compositional spatial models are standard spatial covariance
              models coupled with an injective warping function of the spatial 

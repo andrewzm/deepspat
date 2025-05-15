@@ -73,3 +73,13 @@ layers <- c(AWU(r = 50, dim = 1L, grad = 200, lims = c(-0.5, 0.5)),
 d <- deepspat(f = z ~ s - 1, data = df, layers = layers, method = "ML", nsteps = 100L)
 }
 }
+\author{
+\strong{Maintainer}: Andrew Zammit-Mangion \email{andrewzm@gmail.com}
+
+Authors:
+\itemize{
+  \item Quan Vu
+  \item Xuanjie Shao
+}
+
+}
