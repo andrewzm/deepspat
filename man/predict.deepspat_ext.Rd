@@ -4,7 +4,7 @@
 \alias{predict.deepspat_ext}
 \title{Deep compositional spatial model for extremes}
 \usage{
-\method{predict}{deepspat_ext}(object, newdata, family, dtype = "float32")
+\method{predict}{deepspat_ext}(object, newdata, family, dtype = "float32", ...)
 }
 \arguments{
 \item{object}{a deepspat object obtained from fitting a deep compositional spatial model for extremes.}
@@ -13,8 +13,9 @@
 
 \item{family}{a character string specifying the type of spatial warping; use "sta" for stationary and "nonsta" for non-stationary.}
 
-\item{dtype}{A character string indicating the data type for TensorFlow computations (\code{"float32"} or \code{"float64"}).
-Default is \code{"float32"}#' @param ... currently unused.}
+\item{dtype}{A character string indicating the data type for TensorFlow computations (\code{"float32"} or \code{"float64"}).}
+
+\item{...}{currently unused}
 }
 \value{
 A list with the following components:

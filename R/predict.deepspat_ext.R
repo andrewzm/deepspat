@@ -4,7 +4,7 @@
 #' @param newdata a data frame containing the prediction locations.
 #' @param family a character string specifying the type of spatial warping; use "sta" for stationary and "nonsta" for non-stationary.
 #' @param dtype A character string indicating the data type for TensorFlow computations (\code{"float32"} or \code{"float64"}).
-#'   Default is \code{"float32"}#' @param ... currently unused.
+#' @param ... currently unused
 #' @return A list with the following components:
 #' \describe{
 #'   \item{srescaled}{A matrix of rescaled spatial coordinates produced by scaling the input locations.}
@@ -14,7 +14,7 @@
 #' }
 #' @export
 
-predict.deepspat_ext <- function(object, newdata, family, dtype = "float32") {
+predict.deepspat_ext <- function(object, newdata, family, dtype = "float32", ...) {
 
   d <- object
   mmat <- model.matrix(update(d$f, NULL ~ .), newdata)
