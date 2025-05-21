@@ -14,7 +14,7 @@
 #' @importFrom Matrix crossprod tcrossprod colSums
 #' @importFrom data.table rbindlist
 #' @importFrom methods is
-#' @importFrom stats dist model.matrix var qnorm pnorm runif terms quantile update ecdf
+#' @importFrom stats dist model.matrix var qnorm pnorm rnorm runif terms quantile update ecdf
 #' @importFrom utils str globalVariables
 #' @importFrom evd fpot
 #' @importFrom fields rdist
