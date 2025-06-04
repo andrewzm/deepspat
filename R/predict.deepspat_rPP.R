@@ -1,8 +1,8 @@
 #' @title Deep compositional spatial model for extremes
 #' @description Prediction function for the fitted deepspat_ext object
-#' @param object a deepspat object obtained from fitting a deep compositional spatial model for extremes using max-stable processes.
+#' @param object a deepspat object obtained from fitting a deep compositional spatial model for extremes using r-Pareto processes.
 #' @param newdata a data frame containing the prediction locations.
-#' @param family a character string specifying the type of spatial warping; use "sta" for stationary and "nonsta" for non-stationary.
+#' @param family a character string specifying the type of spatial warping; use "power_stat" for stationary and "power_nonstat" for non-stationary.
 #' @param dtype A character string indicating the data type for TensorFlow computations (\code{"float32"} or \code{"float64"}).
 #'   Default is \code{"float32"}#' @param ... currently unused.
 #' @return A list with the following components:
@@ -15,15 +15,15 @@
 #' }
 #' @export
 
-predict.deepspat_MSP <- function(object, newdata, 
+predict.deepspat_rPP <- function(object, newdata, 
                                  family = c("power_stat", "power_nonstat"), 
                                  dtype = "float32") {
-  
+
   d <- object
   mmat <- model.matrix(update(d$f, NULL ~ .), newdata)
   s_tf <- tf$constant(mmat, dtype = dtype, name = "s")
   s_in <- scale_0_5_tf(s_tf, d$scalings[[1]]$min, d$scalings[[1]]$max, dtype)
-  
+
   # warped space
   if (family == "power_stat") {
     s_out = s_in
@@ -41,35 +41,35 @@ predict.deepspat_MSP <- function(object, newdata,
                                     d$scalings[[i + 1]]$max,
                                     dtype = dtype)
     }
-    
+
     s_out <- h_tf[[d$nlayers + 1]]
   }
-  
+
   fitted.phi <- as.numeric(exp(d$logphi_tf))
   fitted.kappa <- as.numeric(2*tf$sigmoid(d$logitkappa_tf))
   
   Sigma_psi <- NULL
-  # if (d$method == "MPL") {
-  #   # var of estimated dependence parameters
-  #   grad_loss <- d$grad_loss
-  #   hess_loss <- d$hess_loss
-  #   grad_delta <- list(grad = c(as.numeric(grad_loss[1]), as.numeric(grad_loss[2])),
-  #                      hess = as.matrix(hess_loss))
-  #   grad <- grad_delta$grad
-  #   hess <- grad_delta$hess
-  #   J <- grad%*%t(grad)
-  #   K <- hess; Kinv = solve(K)
-  #   Ginv <- Kinv %*% J %*% t(Kinv)
-  #   Sigma_psi <- Ginv
-  #   
-  #   # # var of pairwise CEPs or ECs
-  #   # grad_g = sapply(1:nrow(s_out), function(i) {
-  #   #   gradCEP(c(range_fitted, dof_fitted),
-  #   #           s_out[vis_id, i])
-  #   # })
-  # }
+  if (d$method == "GSM") {
+    # var of estimated dependence parameters
+    grad_loss <- d$grad_loss
+    hess_loss <- d$hess_loss
+    grad_delta <- list(grad = c(as.numeric(grad_loss[1]), as.numeric(grad_loss[2])),
+                      hess = as.matrix(hess_loss))
+    grad <- grad_delta$grad
+    hess <- grad_delta$hess
+    J <- grad%*%t(grad)
+    K <- hess; Kinv = solve(K)
+    Ginv <- Kinv %*% J %*% t(Kinv)
+    Sigma_psi <- Ginv
+    
+    # # var of pairwise CEPs or ECs
+    # grad_g = sapply(1:nrow(s_out), function(i) {
+    #   gradCEP(c(range_fitted, dof_fitted),
+    #           s_out[vis_id, i])
+    # })
+  }
   
-  
+
   list(srescaled = as.matrix(s_in),
        swarped = as.matrix(s_out),
        fitted.phi = fitted.phi,
