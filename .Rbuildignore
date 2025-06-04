@@ -1,15 +1,2 @@
-^.*\.Rproj$
+^deepspat\.Rproj$
 ^\.Rproj\.user$
-^\.travis\.yml$
-^\.travis.yml$
-^\.\.Rcheck$
-^\.git$
-.log$
-.bbl$
-.concordance.tex$
-.synctex.gz$
-^README.md$
-^cran-comments.md$
-^\.\.pdf$
-.toc$
-.tar.gz$
