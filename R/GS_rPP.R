@@ -2,17 +2,17 @@
 # GS
 GradScore <- function(logphi_tf, logitkappa_tf,
                       s_tf, z_tf, u_tf,
-                      pairs_t_tf, ndata, 
+                      pairs_t_tf, ndata,
                       dtype = "float32",
                       layers = NULL, transeta_tf = NULL,
                       a_tf = NULL, scalings = NULL,
-                      risk, weight_fun, dWeight_fun, 
+                      risk, weight_fun, dWeight_fun,
                       family = "power_nonstat") {
-  
+
   nloc = nrow(z_tf)
   nexc = ncol(z_tf)
   z_tf = z_tf/u_tf
-  
+
   s_in = s_tf
   if (family %in% c("power_nonstat")) {
     nlayers = length(layers)
@@ -31,26 +31,26 @@ GradScore <- function(logphi_tf, logitkappa_tf,
       scalings[[i + 1]] <- scale_lims_tf(swarped_tf[[i + 1]])
       swarped_tf[[i + 1]] <- scale_0_5_tf(swarped_tf[[i + 1]], scalings[[i + 1]]$min, scalings[[i + 1]]$max, dtype = dtype)
     }
-    
+
     s_in = swarped_tf[[nlayers+1]]
   }
   ################################
-  
+
   phi_tf = tf$exp(logphi_tf)
   kappa_tf = 2*tf$sigmoid(logitkappa_tf)
-  
+
   # ----------------------------------------------------------------------------
   # sel_pairs_t_tf = tf$reshape(tf$transpose(pairs_tf), c(2L, nrow(pairs_tf), 1L))
   k1_tf = pairs_t_tf[[0]]; k2_tf = pairs_t_tf[[1]]
-  
+
   s1.pairs_tf = tf$gather_nd(s_in, indices = k1_tf)
   s2.pairs_tf = tf$gather_nd(s_in, indices = k2_tf)
   diff.pairs_tf = tf$subtract(s1.pairs_tf, s2.pairs_tf)
   # D.pairs_tf = tf$norm(diff.pairs_tf, ord='euclidean', axis = 1L)
   D.pairs_tf = tf$sqrt(tf$square(diff.pairs_tf[,1]) + tf$square(diff.pairs_tf[,2]))
-  
+
   gamma.pairs_tf = tf$pow(D.pairs_tf/phi_tf, kappa_tf) #0.5*
-  
+
   ones = tf$ones(c(nloc,nloc),dtype=tf$float32) #size of the output matrix
   mask_g = tf$linalg$band_part(ones, 0L, -1L) - tf$linalg$band_part(ones, 0L, 0L) # Mask of upper triangle above diagonal
   non_zero = tf$not_equal(mask_g, 0) #Conversion of mask to Boolean matrix
@@ -58,7 +58,7 @@ GradScore <- function(logphi_tf, logitkappa_tf,
                                                              gamma.pairs_tf,
                                                              dense_shape=c(nloc, nloc)))
   gamma_tf = gamma.uptri_tf + tf$transpose(gamma.uptri_tf)
-  
+
   # D0_tf = tf$norm(s_in, ord='euclidean', axis=1L)
   D0_tf = tf$sqrt(tf$square(s_in[,1]) + tf$square(s_in[,2]))
   gamma0_tf = tf$pow(D0_tf[D0_tf > 0]/phi_tf, kappa_tf) #0.5*
@@ -68,32 +68,32 @@ GradScore <- function(logphi_tf, logitkappa_tf,
                                                              gamma0_tf,
                                                              dense_shape=c(1L,nloc)))
   gammaOrigin_tf = tf$reshape(gammaOrigin_tf, c(nloc))
-  
+
   #####
   S_tf = tf$tile(tf$expand_dims(gammaOrigin_tf, axis=1L), c(1L, nloc)) +
     tf$transpose(tf$tile(tf$expand_dims(gammaOrigin_tf, axis=1L), c(1L, nloc))) - gamma_tf
-  
+
   Sobs_tf <- tf$multiply(1e-10, tf$eye(ndata, dtype = "float64"))
   SZ_tf <- tf$add(S_tf, Sobs_tf) # + jit
   U_tf <- tf$cholesky_upper(SZ_tf)
   Q_tf <- chol2inv_tf(U_tf)
-  
+
   diagS_tf = tf$reshape(tf$linalg$diag_part(S_tf), c(nloc, 1L))
   qrsum_tf = tf$reduce_sum(Q_tf, 1L)
   qsum_tf = tf$reduce_sum(qrsum_tf)
   qqt_tf = tf$multiply(qrsum_tf, tf$expand_dims(qrsum_tf, axis=1L))
-  
+
   A_tf = Q_tf - qqt_tf/qsum_tf
   B_tf = 2*tf$reshape(qrsum_tf/qsum_tf, c(nloc, 1L)) + 2 +
     tf$linalg$matmul(Q_tf, diagS_tf) -
     tf$linalg$matmul(qqt_tf, diagS_tf)/qsum_tf
-  
+
   A_tf = 0.5*(A_tf + tf$transpose(A_tf))
   gradient_tf = -tf$linalg$matmul(A_tf, tf$math$log(z_tf))/z_tf - 0.5/z_tf*B_tf
   diagHessian_tf = -tf$reshape(tf$linalg$diag_part(A_tf), c(nloc, 1L))/z_tf^2 +
     tf$linalg$matmul(A_tf, tf$math$log(z_tf))/z_tf^2 +
     0.5/z_tf^2 * B_tf
-  
+
   # # weight_tf = z_tf*(1 - tf$math$exp(1 - tf$reduce_sum(z_tf, 0L)/u_tf))
   # # dWeight_tf = 1 - tf$math$exp(1 - tf$reduce_sum(z_tf, 0L)/u_tf) * (1 - z_tf/u_tf)
   # if (risk == "sum") {
@@ -105,14 +105,14 @@ GradScore <- function(logphi_tf, logitkappa_tf,
   #
   # weight_tf = z_tf*(1 - tf$math$exp(1 - rxuinv_tf))
   # dWeight_tf = 1 - tf$math$exp(1 - rxuinv_tf) * (1 - drxuinv_tf)
-  
+
   weight_tf = weight_fun(z_tf)
   dWeight_tf = dWeight_fun(z_tf)
-  
-  
+
+
   Cost = tf$reduce_sum(2*weight_tf*dWeight_tf*gradient_tf +
                          weight_tf^2*(diagHessian_tf + 0.5*gradient_tf^2)) / nexc
-  
+
   list(Cost = Cost)
 }
 
@@ -120,7 +120,7 @@ GradScore <- function(logphi_tf, logitkappa_tf,
 
 
 
-WEIGHTS <- function(risk_type, p0 = NULL, weight_type = 1) {
+WEIGHTS <- function(risk_type, p0 = NULL, weight_type = 1, dtype = "float32") {
   if (risk_type == "sum") {
     if (weight_type == 1) {
       weight_fun =function(z_tf, p = p0) {
@@ -153,7 +153,7 @@ WEIGHTS <- function(risk_type, p0 = NULL, weight_type = 1) {
         dpart1 = 0.1*part1*(1-part1)
         dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
           part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
-    } else if (weight_type == 4) { # 
+    } else if (weight_type == 4) { #
       weight_fun =function(z_tf, p = p0) {
         rxuinv_tf = tf$reduce_sum(z_tf, 0L); #zdrxuinv_tf = z_tf
         part1 = tf$where(z_tf > 10,
@@ -172,7 +172,7 @@ WEIGHTS <- function(risk_type, p0 = NULL, weight_type = 1) {
         dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
           part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
     }
-    
+
   } else if (risk_type == "site") {
     if (weight_type == 1) {
       weight_fun =function(z_tf, p = p0) {
@@ -232,7 +232,7 @@ WEIGHTS <- function(risk_type, p0 = NULL, weight_type = 1) {
         dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
           part1drxuinv_tf*tf$math$exp(1 - rxuinv_tf) }
     }
-    
+
   } else if (risk_type == "max") {
     if (weight_type == 1) { # linear
       weight_fun =function(z_tf, p = p0) {
@@ -286,7 +286,7 @@ WEIGHTS <- function(risk_type, p0 = NULL, weight_type = 1) {
         dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
           part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
     }
-    
+
   } else if (risk_type == "sum2") {
     if (weight_type == 1) {
       weight_fun = function(z_tf, p = p0) {
@@ -340,8 +340,8 @@ WEIGHTS <- function(risk_type, p0 = NULL, weight_type = 1) {
         dWeight_tf = dpart1*(1 - tf$math$exp(1 - rxuinv_tf)) +
           part1*tf$math$exp(1 - rxuinv_tf)*drxuinv_tf }
     }
-    
+
   }
-  
+
   list(weight_fun = weight_fun, dWeight_fun = dWeight_fun)
 }
