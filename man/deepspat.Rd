@@ -65,3 +65,21 @@ units.
 
 Constructs a deep compositional spatial model
 }
+\examples{
+\dontrun{
+df <- data.frame(s = rnorm(100), z = rnorm(100))
+layers <- c(AWU(r = 50, dim = 1L, grad = 200, lims = c(-0.5, 0.5)),
+            bisquares1D(r = 50))
+d <- deepspat(f = z ~ s - 1, data = df, layers = layers, method = "ML", nsteps = 100L)
+}
+}
+\author{
+\strong{Maintainer}: Andrew Zammit-Mangion \email{andrewzm@gmail.com}
+
+Authors:
+\itemize{
+  \item Quan Vu
+  \item Xuanjie Shao
+}
+
+}

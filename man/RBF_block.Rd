@@ -30,3 +30,8 @@ Sets up a composition of radial basis functions (RBFs) for used in a deep compos
 sets up RBFs on a prescribed domain on a grid at a certain resolution.
 It returns a list containing all the functions in the single-resolution RBF unit. See Value for more details.
 }
+\examples{
+\dontrun{
+layer <- RBF_block(res = 1L)
+}
+}
