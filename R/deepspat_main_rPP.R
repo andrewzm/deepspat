@@ -73,36 +73,36 @@ deepspat_rPP <- function(f, data,
                          show = T,
                          ...) {
   ptm1 <- Sys.time()
-  
+
   stopifnot(is(f, "formula"))
   stopifnot(is(data, "data.frame"))
   method <- match.arg(method, c("WLS", "GSM"))
   mmat <- model.matrix(f, data)
-  
+
   s_tf <- tf$constant(mmat, name = "s", dtype = dtype)
   scalings <- list(scale_lims_tf(s_tf))
   s_tf <- scale_0_5_tf(s_tf, scalings[[1]]$min, scalings[[1]]$max, dtype) # rescaling
-  
+
   depvar <- get_depvars_multivar3(f, ncol(data)-2) # return the variable name of the dependent variable.
   z_tf <- tf$constant(as.matrix(data[, depvar]), name = 'z', dtype = dtype)
   ndata <- nrow(data)
-  
+
   ## initialize dependence parameters
   logphi_tf <- tf$Variable(par_init$variogram_logrange, name = "range", dtype = dtype)
   logitkappa_tf <- tf$Variable(par_init$variogram_logitdf, name = "DoF", dtype = dtype)
-  
+
   # location pair indices
   pairs <- t(do.call("cbind", sapply(0:(nrow(data)-2), function(k1){
     sapply((k1+1):(nrow(data)-1), function(k2){ c(k1,k2) } ) } )))
   pairs_tf <- tf$reshape(tf$constant(pairs, dtype = tf$int32), c(nrow(pairs), 2L, 1L))
   pairs_t_tf <- tf$reshape(tf$transpose(pairs_tf), c(2L, nrow(pairs_tf), 1L))
-  
+
   # hyperparameters
   if (is.numeric(thre)) u_tf <- tf$constant(as.numeric(thre), name = 'u', dtype = dtype)
   if (!is.null(edm_emp)) edm_emp_tf <- tf$constant(edm_emp, dtype=dtype)
-  
+
   if (family == "power_stat") {
-    
+
     if (method == "WLS") {
       Cost_fn = function() {
         loss_obj <- LeastSquares(logphi_tf = logphi_tf,
@@ -116,10 +116,10 @@ deepspat_rPP <- function(f, data,
                              family = family, dtype = dtype,
                              weight_type = "dependence",
                              edm_emp_tf = edm_emp_tf)
-        
+
         loss_obj$Cost
       }
-      
+
     } else if (method == "GSM") {
       Cost_fn = function() {
         loss_obj <- GradScore(logphi_tf = logphi_tf,
@@ -139,20 +139,20 @@ deepspat_rPP <- function(f, data,
                           dWeight_fun = dWeight_fun)
         loss_obj$Cost
       }
-      
+
     }
-    
+
     trainvario = function(loss_fn, var_list)
       train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$vario))
-    
+
     Objective <- rep(0, nsteps*2)
-    
+
     if(method == "WLS"){
       negcostname <- "LeastSquares"
     } else if(method == "GSM") {
       negcostname <- "GradScore"
     }
-    
+
     cat("Learning weight parameters... \n")
     for(i in 1:(2*nsteps)) { # nsteps
       trainvario(Cost_fn, var_list = c(logphi_tf, logitkappa_tf))
@@ -162,19 +162,19 @@ deepspat_rPP <- function(f, data,
       }
       Objective[i] <- as.numeric(thisML)
     }
-    
+
     eta_tf <- a_tf <- NULL
     swarped_tf <- list(s_tf)
     swarped <- as.matrix(s_tf)
     nlayers <- NULL
     transeta_tf <- NULL
   }
-  
+
   # ============================================================================
   if (family == "power_nonstat") {
     stopifnot(is.list(layers))
     nlayers <- length(layers)
-    
+
     # BRF & AWU parameters
     transeta_tf <- list()
     if(nlayers > 1) for(i in 1:nlayers) { # (nlayers - 1)
@@ -187,7 +187,7 @@ deepspat_rPP <- function(f, data,
                                         name = paste0("eta", i), dtype = dtype)
       }
     }
-    
+
     if (method == "WLS") {
       Cost_fn <- function() {
         loss_obj <- LeastSquares(logphi_tf = logphi_tf,
@@ -203,51 +203,51 @@ deepspat_rPP <- function(f, data,
                              edm_emp_tf = edm_emp_tf)
         Cost <- loss_obj$Cost
         if (nRBF2layers > 0 & pen_coef != 0) {
-          for (i in RBF2idx) { 
+          for (i in RBF2idx) {
             Cost <- Cost+pen_coef*tf$pow(layers[[i]]$trans(transeta_tf[[i]]), 2) }}
         Cost
       }
     } else if (method == "GSM") {
       Cost_fn <- function() {
         loss_obj <- GradScore(logphi_tf = logphi_tf,
-                          logitkappa_tf = logitkappa_tf,
-                          transeta_tf = transeta_tf,
-                          a_tf = a_tf,
-                          scalings = scalings,
-                          layers = layers,
-                          s_tf = s_tf,
-                          z_tf = z_tf,
-                          u_tf = u_tf,
-                          pairs_t_tf = pairs_t_tf,
-                          ndata = ndata,
-                          risk = risk,
-                          family = family, 
-                          dtype = dtype,
-                          weight_fun = weight_fun,
-                          dWeight_fun = dWeight_fun)
+                              logitkappa_tf = logitkappa_tf,
+                              transeta_tf = transeta_tf,
+                              a_tf = a_tf,
+                              scalings = scalings,
+                              layers = layers,
+                              s_tf = s_tf,
+                              z_tf = z_tf,
+                              u_tf = u_tf,
+                              pairs_t_tf = pairs_t_tf,
+                              ndata = ndata,
+                              risk = risk,
+                              family = family,
+                              dtype = dtype,
+                              weight_fun = weight_fun,
+                              dWeight_fun = dWeight_fun)
         Cost <- loss_obj$Cost
         if (nRBF2layers > 0 & pen_coef != 0) {
-          for (i in RBF2idx) { 
+          for (i in RBF2idx) {
             Cost <- Cost+pen_coef*tf$pow(layers[[i]]$trans(transeta_tf[[i]]), 2) }}
         Cost
       }
-      
+
     }
-    
+
     # trainvario = (tf$optimizers$Adam(learn_rates$vario))$minimize
     trainvario <- function(loss_fn, var_list)
       train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$vario))
-    
+
     nLFTlayers <- sum(sapply(layers, function(l) l$name) == "LFT")
     LFTidx <- which(sapply(layers, function(l) l$name) == "LFT")
     notLFTidx <- setdiff(1:nlayers, LFTidx)
-    
+
     AWUidx <- which(sapply(layers, function(l) l$name) == "AWU")
     nRBF1layers <- sum(sapply(layers, function(l) l$name) == "RBF1")
     RBF1idx <- which(sapply(layers, function(l) l$name) == "RBF1")
     nRBF2layers <- sum(sapply(layers, function(l) l$name) == "RBF2")
     RBF2idx <- which(sapply(layers, function(l) l$name) == "RBF2")
-    
+
     opt_eta <- (nlayers > 1) & (nLFTlayers < nlayers)
     if(opt_eta){
       traineta_mean <- function(loss_fn, var_list)
@@ -258,28 +258,28 @@ deepspat_rPP <- function(f, data,
           train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$eta_mean2))
       # traineta_mean2 = (tf$optimizers$Adam(learn_rates$eta_mean2))$minimize
     }
-    
+
     if(nLFTlayers > 0) {
       a_tf <- layers[[LFTidx]]$pars
       trainLFTpars <- function(loss_fn, var_list)
         train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$LFTpars))
       # trainLFTpars <- (tf$optimizers$Adam(learn_rates$LFTpars))$minimize #
     } else {a_tf <- NULL}
-    
-    
+
+
     pre_bool <- c(nRBF1layers > 0, nRBF2layers > 0, nLFTlayers > 0)
     pre_count <- 1*pre_bool[1] + sum(pre_bool[2:3])
     # pre_count = sum(pre_bool)
-    
+
     nsteps_all <- nsteps+nsteps_pre*pre_count
     Objective <- rep(0, nsteps_all)
-    
+
     if(method == "WLS"){
       negcostname <- "LeastSquares"
     } else if(method == "GSM") {
       negcostname <- "GradScore"
     }
-    
+
     cat("Learning weight parameters and dependence parameters in turn... \n")
     for(i in 1:(nsteps_pre*pre_count)) { # nsteps
       if (pre_bool[1] & i <= nsteps_pre*1*pre_bool[1]) {
@@ -291,18 +291,18 @@ deepspat_rPP <- function(f, data,
           i > nsteps_pre*(1*pre_bool[1]+pre_bool[2])) {
         trainLFTpars(Cost_fn, var_list = a_tf) }
       trainvario(Cost_fn, var_list = c(logphi_tf, logitkappa_tf))
-      
+
       thisML <- Cost_fn()
       if(show & (i %% 10) == 0) {
         cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML,"\n"))
-        # cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML, 
-        #            "; phi: ", round(exp(logphi_tf), 3), 
+        # cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML,
+        #            "; phi: ", round(exp(logphi_tf), 3),
         #            "; kappa: ", round(2*tf$sigmoid(logitkappa_tf),"\n"), 3))
       }
       #
       Objective[i] <- as.numeric(thisML)
     }
-    
+
     cat("Updating everything... \n")
     for(i in 1:nsteps+nsteps_pre*pre_count) { # (2*nsteps + 1):(3 * nsteps)
       if (nRBF1layers > 0) { traineta_mean(Cost_fn, var_list = transeta_tf[c(AWUidx, RBF1idx)]) }
@@ -316,8 +316,8 @@ deepspat_rPP <- function(f, data,
       }
       Objective[i] <- as.numeric(thisML)
     }
-    
-    
+
+
     # generate warped sapces
     eta_tf <- swarped_tf <- list()
     swarped_tf[[1]] <- s_tf
@@ -333,12 +333,12 @@ deepspat_rPP <- function(f, data,
       scalings[[i + 1]] <- scale_lims_tf(swarped_tf[[i + 1]])
       swarped_tf[[i + 1]] <- scale_0_5_tf(swarped_tf[[i + 1]], scalings[[i + 1]]$min, scalings[[i + 1]]$max, dtype = dtype)
     }
-    
+
     swarped <- as.matrix(swarped_tf[[length(swarped_tf)]])
   }
   ptm2 <- Sys.time();
   ptm <- ptm2-ptm1
-  
+
   # ------------------------------
   grad_loss = hess_loss = NULL
   if (method == "GSM") {
@@ -346,38 +346,38 @@ deepspat_rPP <- function(f, data,
       logphi_tf = tf$math$log(deppar[1])
       logitkappa_tf = tf$math$log(deppar[2]/(2-deppar[2]))
       loss_obj <- GradScore(logphi_tf = logphi_tf,
-                        logitkappa_tf = logitkappa_tf,
-                        transeta_tf = transeta_tf,
-                        a_tf = a_tf,
-                        scalings = scalings,
-                        layers = layers,
-                        s_tf = s_tf,
-                        z_tf = z_tf,
-                        u_tf = u_tf,
-                        pairs_t_tf = pairs_t_tf,
-                        ndata = ndata,
-                        method = method,
-                        risk = risk,
-                        family = family, dtype = dtype,
-                        weight_fun = weight_fun,
-                        dWeight_fun = dWeight_fun)
+                            logitkappa_tf = logitkappa_tf,
+                            transeta_tf = transeta_tf,
+                            a_tf = a_tf,
+                            scalings = scalings,
+                            layers = layers,
+                            s_tf = s_tf,
+                            z_tf = z_tf,
+                            u_tf = u_tf,
+                            pairs_t_tf = pairs_t_tf,
+                            ndata = ndata,
+                            risk = risk,
+                            family = family,
+                            dtype = dtype,
+                            weight_fun = weight_fun,
+                            dWeight_fun = dWeight_fun)
       loss_obj$Cost
     }
-    
+
     deppar <- tf$Variable(c(exp(logphi_tf), 2*tf$sigmoid(logitkappa_tf)))
     with (tf$GradientTape(persistent=T) %as% tape1, {
       with (tf$GradientTape(persistent=T) %as% tape2, {
         loss <- Cost_fn1(deppar)
       })
       grad_loss <- tape2$gradient(loss, deppar)
-      
+
     })
     hess_loss <- tape1$jacobian(grad_loss, deppar)
-    
+
   }
   # ------------------------------
-  
-  
+
+
   deepspat.obj <- list(layers = layers,
                        Cost = Cost_fn(),
                        transeta_tf = transeta_tf,           #
@@ -404,7 +404,7 @@ deepspat_rPP <- function(f, data,
                        grad_loss = grad_loss,
                        hess_loss = hess_loss,
                        time = ptm)
-  
+
   class(deepspat.obj) <- "deepspat_rPP"
   deepspat.obj
 }
