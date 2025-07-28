@@ -48,7 +48,7 @@ Default is \code{"float32"}}
 
 \item{edm_emp}{For the WLS method, a numeric vector or matrix providing an empirical extremal coefficients.}
 
-\item{p}{For pairwise likelihood based methods, p is used to specify the size of pair subset for pairwise likelihood, 
+\item{p}{For pairwise likelihood based methods, p is used to specify the size of pair subset for pairwise likelihood,
 or the probability parameter of Bernoulli r.v. for randomized pairwise likelihood.}
 
 \item{pen_coef}{A penality parameter for weights of SR-RBF(2) to relieve overfitting.}
