@@ -47,7 +47,6 @@
 #'   \item{\code{dWeight_fun}}{The derivative of the weighting function used in the GS method.}
 #'   \item{\code{f}}{The model formula.}
 #'   \item{\code{data}}{The data frame used for model fitting.}
-#'   \item{\code{ndata}}{Number of observations in \code{data}.}
 #'   \item{\code{negcost}}{Vector of cost values recorded during training.}
 #'   \item{\code{grad_loss}}{Gradient of the loss (available for the GS method).}
 #'   \item{\code{hess_loss}}{Hessian of the loss (available for the GS method).}
@@ -85,7 +84,7 @@ deepspat_rPP <- function(f, data,
 
   depvar <- get_depvars_multivar3(f, ncol(data)-2) # return the variable name of the dependent variable.
   z_tf <- tf$constant(as.matrix(data[, depvar]), name = 'z', dtype = dtype)
-  ndata <- nrow(data)
+  # ndata <- nrow(data)
 
   ## initialize dependence parameters
   logphi_tf <- tf$Variable(par_init$variogram_logrange, name = "range", dtype = dtype)
@@ -132,7 +131,7 @@ deepspat_rPP <- function(f, data,
                           z_tf = z_tf,
                           u_tf = u_tf,
                           pairs_t_tf = pairs_t_tf,
-                          ndata = ndata,
+                          # ndata = ndata,
                           risk = risk,
                           family = family, dtype = dtype,
                           weight_fun = weight_fun,
@@ -210,21 +209,21 @@ deepspat_rPP <- function(f, data,
     } else if (method == "GSM") {
       Cost_fn <- function() {
         loss_obj <- GradScore(logphi_tf = logphi_tf,
-                              logitkappa_tf = logitkappa_tf,
-                              transeta_tf = transeta_tf,
-                              a_tf = a_tf,
-                              scalings = scalings,
-                              layers = layers,
-                              s_tf = s_tf,
-                              z_tf = z_tf,
-                              u_tf = u_tf,
-                              pairs_t_tf = pairs_t_tf,
-                              ndata = ndata,
-                              risk = risk,
-                              family = family,
-                              dtype = dtype,
-                              weight_fun = weight_fun,
-                              dWeight_fun = dWeight_fun)
+                          logitkappa_tf = logitkappa_tf,
+                          transeta_tf = transeta_tf,
+                          a_tf = a_tf,
+                          scalings = scalings,
+                          layers = layers,
+                          s_tf = s_tf,
+                          z_tf = z_tf,
+                          u_tf = u_tf,
+                          pairs_t_tf = pairs_t_tf,
+                          # ndata = ndata,
+                          risk = risk,
+                          family = family,
+                          dtype = dtype,
+                          weight_fun = weight_fun,
+                          dWeight_fun = dWeight_fun)
         Cost <- loss_obj$Cost
         if (nRBF2layers > 0 & pen_coef != 0) {
           for (i in RBF2idx) {
@@ -339,44 +338,6 @@ deepspat_rPP <- function(f, data,
   ptm2 <- Sys.time();
   ptm <- ptm2-ptm1
 
-  # ------------------------------
-  grad_loss = hess_loss = NULL
-  if (method == "GSM") {
-    Cost_fn1 = function(deppar) {
-      logphi_tf = tf$math$log(deppar[1])
-      logitkappa_tf = tf$math$log(deppar[2]/(2-deppar[2]))
-      loss_obj <- GradScore(logphi_tf = logphi_tf,
-                            logitkappa_tf = logitkappa_tf,
-                            transeta_tf = transeta_tf,
-                            a_tf = a_tf,
-                            scalings = scalings,
-                            layers = layers,
-                            s_tf = s_tf,
-                            z_tf = z_tf,
-                            u_tf = u_tf,
-                            pairs_t_tf = pairs_t_tf,
-                            ndata = ndata,
-                            risk = risk,
-                            family = family,
-                            dtype = dtype,
-                            weight_fun = weight_fun,
-                            dWeight_fun = dWeight_fun)
-      loss_obj$Cost
-    }
-
-    deppar <- tf$Variable(c(exp(logphi_tf), 2*tf$sigmoid(logitkappa_tf)))
-    with (tf$GradientTape(persistent=T) %as% tape1, {
-      with (tf$GradientTape(persistent=T) %as% tape2, {
-        loss <- Cost_fn1(deppar)
-      })
-      grad_loss <- tape2$gradient(loss, deppar)
-
-    })
-    hess_loss <- tape1$jacobian(grad_loss, deppar)
-
-  }
-  # ------------------------------
-
 
   deepspat.obj <- list(layers = layers,
                        Cost = Cost_fn(),
@@ -399,10 +360,12 @@ deepspat_rPP <- function(f, data,
                        dWeight_fun = dWeight_fun,
                        f = f,
                        data = data,
-                       ndata = ndata,
+                       # ndata = ndata,
                        negcost = Objective,
-                       grad_loss = grad_loss,
-                       hess_loss = hess_loss,
+                       # jaco_loss = jaco_loss,
+                       # hess_loss = hess_loss,
+                       pairs_tf = pairs_tf,
+                       pairs_t_tf = pairs_t_tf,
                        time = ptm)
 
   class(deepspat.obj) <- "deepspat_rPP"

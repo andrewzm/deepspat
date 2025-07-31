@@ -2,7 +2,7 @@
 # GS
 GradScore <- function(logphi_tf, logitkappa_tf,
                       s_tf, z_tf, u_tf,
-                      pairs_t_tf, ndata,
+                      pairs_t_tf,
                       dtype = "float32",
                       layers = NULL, transeta_tf = NULL,
                       a_tf = NULL, scalings = NULL,
@@ -73,7 +73,7 @@ GradScore <- function(logphi_tf, logitkappa_tf,
   S_tf = tf$tile(tf$expand_dims(gammaOrigin_tf, axis=1L), c(1L, nloc)) +
     tf$transpose(tf$tile(tf$expand_dims(gammaOrigin_tf, axis=1L), c(1L, nloc))) - gamma_tf
 
-  Sobs_tf <- tf$multiply(1e-10, tf$eye(ndata, dtype = "float64"))
+  Sobs_tf <- tf$multiply(1e-10, tf$eye(nloc, dtype = "float64"))
   SZ_tf <- tf$add(S_tf, Sobs_tf) # + jit
   U_tf <- tf$cholesky_upper(SZ_tf)
   Q_tf <- chol2inv_tf(U_tf)
@@ -120,7 +120,8 @@ GradScore <- function(logphi_tf, logitkappa_tf,
 
 
 
-WEIGHTS <- function(risk_type, p0 = NULL, weight_type = 1, dtype = "float32") {
+WEIGHTS <- function(risk_type, p0 = NULL, weight_type = 1,
+                    dtype = "float32") {
   if (risk_type == "sum") {
     if (weight_type == 1) {
       weight_fun =function(z_tf, p = p0) {
@@ -344,4 +345,95 @@ WEIGHTS <- function(risk_type, p0 = NULL, weight_type = 1, dtype = "float32") {
   }
 
   list(weight_fun = weight_fun, dWeight_fun = dWeight_fun)
+}
+
+
+
+
+
+################################################################################
+GradScore1 <- function(logphi_tf, logitkappa_tf,
+                      s_tf, z_tf, u_tf,
+                      pairs_t_tf,
+                      dtype = "float32",
+                      # layers = NULL, transeta_tf = NULL,
+                      # a_tf = NULL, scalings = NULL,
+                      risk, weight_fun, dWeight_fun) {
+
+  nloc = nrow(z_tf)
+  nexc = ncol(z_tf)
+  z_tf = z_tf/u_tf
+
+  s_in = s_tf
+  ################################
+
+  phi_tf = tf$exp(logphi_tf)
+  kappa_tf = 2*tf$sigmoid(logitkappa_tf)
+
+  # ----------------------------------------------------------------------------
+  # sel_pairs_t_tf = tf$reshape(tf$transpose(pairs_tf), c(2L, nrow(pairs_tf), 1L))
+  k1_tf = pairs_t_tf[[0]]; k2_tf = pairs_t_tf[[1]]
+
+  s1.pairs_tf = tf$gather_nd(s_in, indices = k1_tf)
+  s2.pairs_tf = tf$gather_nd(s_in, indices = k2_tf)
+  diff.pairs_tf = tf$subtract(s1.pairs_tf, s2.pairs_tf)
+  # D.pairs_tf = tf$norm(diff.pairs_tf, ord='euclidean', axis = 1L)
+  D.pairs_tf = tf$sqrt(tf$square(diff.pairs_tf[,1]) + tf$square(diff.pairs_tf[,2]))
+
+  gamma.pairs_tf = tf$pow(D.pairs_tf/phi_tf, kappa_tf) #0.5*
+
+  ones = tf$ones(c(nloc,nloc),dtype=tf$float32) #size of the output matrix
+  mask_g = tf$linalg$band_part(ones, 0L, -1L) - tf$linalg$band_part(ones, 0L, 0L) # Mask of upper triangle above diagonal
+  non_zero = tf$not_equal(mask_g, 0) #Conversion of mask to Boolean matrix
+  gamma.uptri_tf = tf$sparse$to_dense(tf$sparse$SparseTensor(tf$where(non_zero),
+                                                             gamma.pairs_tf,
+                                                             dense_shape=c(nloc, nloc)))
+  gamma_tf = gamma.uptri_tf + tf$transpose(gamma.uptri_tf)
+
+  # D0_tf = tf$norm(s_in, ord='euclidean', axis=1L)
+  D0_tf = tf$sqrt(tf$square(s_in[,1]) + tf$square(s_in[,2]))
+  gamma0_tf = tf$pow(D0_tf[D0_tf > 0]/phi_tf, kappa_tf) #0.5*
+  indices0 = tf$where(D0_tf > 0)
+  indices1 = tf$concat(c(tf$zeros(tf$shape(indices0), dtype=tf$int64), indices0), axis = 1L)
+  gammaOrigin_tf = tf$sparse$to_dense(tf$sparse$SparseTensor(indices1,
+                                                             gamma0_tf,
+                                                             dense_shape=c(1L,nloc)))
+  gammaOrigin_tf = tf$reshape(gammaOrigin_tf, c(nloc))
+
+  #####
+  S_tf = tf$tile(tf$expand_dims(gammaOrigin_tf, axis=1L), c(1L, nloc)) +
+    tf$transpose(tf$tile(tf$expand_dims(gammaOrigin_tf, axis=1L), c(1L, nloc))) - gamma_tf
+
+  Sobs_tf <- tf$multiply(1e-10, tf$eye(nloc, dtype = "float64"))
+  SZ_tf <- tf$add(S_tf, Sobs_tf) # + jit
+  U_tf <- tf$cholesky_upper(SZ_tf)
+  Q_tf <- chol2inv_tf(U_tf)
+
+  diagS_tf = tf$reshape(tf$linalg$diag_part(S_tf), c(nloc, 1L))
+  qrsum_tf = tf$reduce_sum(Q_tf, 1L)
+  qsum_tf = tf$reduce_sum(qrsum_tf)
+  qqt_tf = tf$multiply(qrsum_tf, tf$expand_dims(qrsum_tf, axis=1L))
+
+  A_tf = Q_tf - qqt_tf/qsum_tf
+  B_tf = 2*tf$reshape(qrsum_tf/qsum_tf, c(nloc, 1L)) + 2 +
+    tf$linalg$matmul(Q_tf, diagS_tf) -
+    tf$linalg$matmul(qqt_tf, diagS_tf)/qsum_tf
+
+  A_tf = 0.5*(A_tf + tf$transpose(A_tf))
+  gradient_tf = -tf$linalg$matmul(A_tf, tf$math$log(z_tf))/z_tf - 0.5/z_tf*B_tf
+  diagHessian_tf = -tf$reshape(tf$linalg$diag_part(A_tf), c(nloc, 1L))/z_tf^2 +
+    tf$linalg$matmul(A_tf, tf$math$log(z_tf))/z_tf^2 +
+    0.5/z_tf^2 * B_tf
+
+  weight_tf = weight_fun(z_tf)
+  dWeight_tf = dWeight_fun(z_tf)
+
+  # Cost = tf$reduce_sum(2*weight_tf*dWeight_tf*gradient_tf +
+  #                        weight_tf^2*(diagHessian_tf + 0.5*gradient_tf^2)) / nexc
+  Cost_items = tf$reduce_sum(2*weight_tf*dWeight_tf*gradient_tf +
+                               weight_tf^2*(diagHessian_tf + 0.5*gradient_tf^2),
+                             axis = 0L)
+
+
+  list(Cost_items = Cost_items)
 }

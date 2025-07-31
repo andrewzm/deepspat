@@ -83,14 +83,15 @@ deepspat_MSP <- function(f, data,
   logitkappa_tf = tf$Variable(par_init$variogram_logitdf, name = "DoF", dtype = dtype)
 
   # location pair indices
-  pairs = t(do.call("cbind", sapply(0:(nrow(data)-2), function(k1){
+  # location pair indices
+  pairs_all = t(do.call("cbind", sapply(0:(nrow(data)-2), function(k1){
     sapply((k1+1):(nrow(data)-1), function(k2){ c(k1,k2) } ) } )))
   if (p < 1 & method == "MPL") {
-    pairs = pairs[sample(1:nrow(pairs), round(nrow(pairs)*p)),]
+    pairs = pairs_all[sample(1:nrow(pairs_all), round(nrow(pairs_all)*p)),]
   } else if (p < 1 & method == "MRPL") {
     pairs0 = do.call("rbind", sapply(1:ncol(data), function(i) {
-      pi = rbinom(nrow(pairs), size = 1, prob = 0.01)
-      cbind(rep(i-1,sum(pi)), pairs[which(pi==1), ], which(pi==1))  }))
+      pi = rbinom(nrow(pairs_all), size = 1, prob = 0.01)
+      cbind(rep(i-1,sum(pi)), pairs_all[which(pi==1), ], which(pi==1))  }))
 
     pairs_id = pairs0[,4] # id of sampled pairs
     pairs_id_uni = unique(pairs_id)
@@ -99,11 +100,13 @@ deepspat_MSP <- function(f, data,
     recover_pos_tf = tf$reshape(tf$constant(recover_pos, dtype = tf$int32),
                                 c(length(recover_pos), 1L))
 
-    pairs_uni = pairs[pairs_id_uni, ]
+    pairs_uni = pairs_all[pairs_id_uni, ]
     pairs_uni_tf = tf$reshape(tf$constant(pairs_uni, dtype = tf$int32),
                               c(nrow(pairs_uni), ncol(pairs_uni), 1L))
 
     pairs = pairs0[,1:3]
+  } else {
+    pairs = pairs_all
   }
 
   pairs_tf = tf$reshape(tf$constant(pairs, dtype = tf$int32), c(nrow(pairs), ncol(pairs), 1L))
@@ -221,6 +224,7 @@ deepspat_MSP <- function(f, data,
                                  layers = layers,
                                  s_tf = s_tf,
                                  pairs_tf = pairs_tf,
+                                 family = family,
                                  dtype = dtype,
                                  weight_type = "dependence",
                                  edm_emp_tf = edm_emp_tf)
@@ -242,6 +246,7 @@ deepspat_MSP <- function(f, data,
                                  s_tf = s_tf,
                                  z_tf = z_tf,
                                  pairs_tf = pairs_tf,
+                                 family = family,
                                  dtype = dtype)
         Cost = loss_obj$Cost
         if (nRBF2layers > 0 & pen_coef != 0) {
@@ -371,15 +376,59 @@ deepspat_MSP <- function(f, data,
       swarped_tf[[i + 1]] <- scale_0_5_tf(swarped_tf[[i + 1]], scalings[[i + 1]]$min, scalings[[i + 1]]$max, dtype = dtype)
     }
 
-    swarped <- as.matrix(swarped_tf[[length(swarped_tf)]])
+    swarped_out <- swarped_tf[[length(swarped_tf)]]
+    swarped <- as.matrix(swarped_out)
   }
   ptm2 <- Sys.time();
   ptm <- ptm2-ptm1
 
-  # ------------------------------
-  grad_loss <- hess_loss <- NULL
-
-  # ------------------------------
+  # # ------------------------------
+  # jaco_loss = NULL
+  # cat("Evauating Jacobian... \n")
+  # if (method %in% c("MPL", "MRPL")) {
+  #   deppar <- tf$Variable(c(exp(logphi_tf), 2*tf$sigmoid(logitkappa_tf)))
+  #   if (method == "MRPL") {
+  #     pairs1 = pairs_all[sample(1:nrow(pairs_all), round(nrow(pairs_all)*p)),]
+  #     pairs_samp_tf =  tf$reshape(tf$constant(pairs1, dtype = tf$int32),
+  #                                  c(nrow(pairs1), ncol(pairs1), 1L))
+  #   } else if (method == "MPL") { pairs_samp_tf = pairs_tf }
+  #
+  #   Cost_fn1 = function(deppar, pairs_unc_tf) {
+  #     logphi_tf = tf$math$log(deppar[1])
+  #     logitkappa_tf = tf$math$log(deppar[2]/(2-deppar[2]))
+  #     loss_obj <- nLogPairLike1(logphi_tf = logphi_tf,
+  #                               logitkappa_tf = logitkappa_tf,
+  #                               s_tf = swarped_out,
+  #                               z_tf = z_tf,
+  #                               pairs_tf = pairs_unc_tf, #pairs_all_tf,
+  #                               dtype = dtype)
+  #     loss_obj$Cost_items
+  #   }
+  #
+  #   # don't use tape
+  #   del = 1e-8
+  #   deppar_del1 = tf$Variable(deppar + c(del, 0))
+  #   deppar_del2 = tf$Variable(deppar + c(0, del))
+  #   cost0 = Cost_fn1(deppar, pairs_samp_tf)
+  #   cost1 = Cost_fn1(deppar_del1, pairs_samp_tf)
+  #   cost2 = Cost_fn1(deppar_del2, pairs_samp_tf)
+  #   deri1 = (cost1 - cost0)/del
+  #   deri2 = (cost2 - cost0)/del
+  #   jaco_loss = tf$stack(list(deri1, deri2), axis = 2L)
+  #
+  #   # use tape
+  #   # compute_jaco <- function(pair0_tf) {
+  #   #   pair0_tf = tf$expand_dims(pair0_tf, axis = 0L)
+  #   #   with (tf$GradientTape(persistent=T) %as% tape, {
+  #   #     tape$watch(deppar)
+  #   #     loss <- Cost_fn1(deppar, pair0_tf)
+  #   #   })
+  #   #   jaco <- tape$jacobian(loss, deppar)
+  #   # }
+  #   # jaco_loss <- tf$map_fn(fn = compute_jaco, elems = pairs_samp_tf, dtype = deppar$dtype)
+  #   # jaco_loss = tf$squeeze(jaco_loss, axis = 2L)
+  # }
+  # # ------------------------------
 
 
   deepspat.obj <- list(layers = layers,
@@ -402,8 +451,9 @@ deepspat_MSP <- function(f, data,
                        data = data,
                        ndata = ndata,
                        negcost = Objective,
-                       grad_loss = grad_loss,
-                       hess_loss = hess_loss,
+                       # jaco_loss = jaco_loss,
+                       pairs_tf = pairs_tf,
+                       p = p,
                        time = ptm)
 
   class(deepspat.obj) <- "deepspat_MSP"
