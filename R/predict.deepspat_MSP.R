@@ -2,9 +2,6 @@
 #' @description Prediction function for the fitted deepspat_ext object
 #' @param object a deepspat object obtained from fitting a deep compositional spatial model for extremes using max-stable processes.
 #' @param newdata a data frame containing the prediction locations.
-#' @param family a character string specifying the type of spatial warping; use "sta" for stationary and "nonsta" for non-stationary.
-#' @param dtype A character string indicating the data type for TensorFlow computations (\code{"float32"} or \code{"float64"}).
-#'   Default is \code{"float32"}#' @param ... currently unused.
 #' @return A list with the following components:
 #' \describe{
 #'   \item{srescaled}{A matrix of rescaled spatial coordinates produced by scaling the input locations.}
@@ -54,17 +51,17 @@ predict.deepspat_MSP <- function(object, newdata) {
   jaco_loss = NULL
   cat("Evauating Jacobian... \n")
   deppar <- tf$Variable(c(fitted.phi, fitted.kappa), dtype=dtype)
-  if (method %in% c("MPL", "MRPL")) {
+  if (d$method %in% c("MPL", "MRPL")) {
     # using all pairs when estimating J, K is intractable
     # a fraction p1 of pairs is used instead
     p1 = d$p
-    if (method == "MRPL") {
+    if (d$method == "MRPL") {
       pairs_all = t(do.call("cbind", sapply(0:(nrow(d$s_tf)-2), function(k1){
         sapply((k1+1):(nrow(d$s_tf)-1), function(k2){ c(k1,k2) } ) } )))
       pairs = pairs_all[sample(1:nrow(pairs_all), round(nrow(pairs_all)*p1)),]
       pairs_tf =  tf$reshape(tf$constant(pairs, dtype = tf$int32),
                                   c(nrow(pairs), ncol(pairs), 1L))
-    } else if (method == "MPL") { pairs_tf = d$pairs_tf }
+    } else if (d$method == "MPL") { pairs_tf = d$pairs_tf }
 
     Cost_fn1 = function(deppar, pairs_tf) {
       logphi_tf = tf$math$log(deppar[1])

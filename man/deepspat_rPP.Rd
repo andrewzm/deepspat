@@ -90,7 +90,6 @@ Default is \code{"float32"}}
   \item{\code{dWeight_fun}}{The derivative of the weighting function used in the GS method.}
   \item{\code{f}}{The model formula.}
   \item{\code{data}}{The data frame used for model fitting.}
-  \item{\code{ndata}}{Number of observations in \code{data}.}
   \item{\code{negcost}}{Vector of cost values recorded during training.}
   \item{\code{grad_loss}}{Gradient of the loss (available for the GS method).}
   \item{\code{hess_loss}}{Hessian of the loss (available for the GS method).}

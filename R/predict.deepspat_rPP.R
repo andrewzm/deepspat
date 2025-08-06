@@ -2,9 +2,6 @@
 #' @description Prediction function for the fitted deepspat_ext object
 #' @param object a deepspat object obtained from fitting a deep compositional spatial model for extremes using r-Pareto processes.
 #' @param newdata a data frame containing the prediction locations.
-#' @param family a character string specifying the type of spatial warping; use "power_stat" for stationary and "power_nonstat" for non-stationary.
-#' @param dtype A character string indicating the data type for TensorFlow computations (\code{"float32"} or \code{"float64"}).
-#'   Default is \code{"float32"}#' @param ... currently unused.
 #' @return A list with the following components:
 #' \describe{
 #'   \item{srescaled}{A matrix of rescaled spatial coordinates produced by scaling the input locations.}
@@ -22,7 +19,7 @@ predict.deepspat_rPP <- function(object, newdata) {
   family <- d$family
   s_new_tf <- tf$constant(model.matrix(update(d$f, NULL ~ .), newdata),
                           dtype = dtype, name = "s")
-  s_new_in <- scale_0_5_tf(s_tf, d$scalings[[1]]$min, d$scalings[[1]]$max, dtype)
+  s_new_in <- scale_0_5_tf(d$s_tf, d$scalings[[1]]$min, d$scalings[[1]]$max, dtype)
   # risk <- d$risk
   # weight_fun <- d$weight_fun
   # dWeight_fun <- d$dWeight_fun
