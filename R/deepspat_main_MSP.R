@@ -89,7 +89,7 @@ deepspat_MSP <- function(f, data,
   if (p < 1 & method == "MPL") {
     pairs = pairs_all[sample(1:nrow(pairs_all), round(nrow(pairs_all)*p)),]
   } else if (p < 1 & method == "MRPL") {
-    pairs0 = do.call("rbind", sapply(1:ncol(data), function(i) {
+    pairs0 = do.call("rbind", sapply(1:(ncol(data)-2), function(i) {
       pi = rbinom(nrow(pairs_all), size = 1, prob = 0.01)
       cbind(rep(i-1,sum(pi)), pairs_all[which(pi==1), ], which(pi==1))  }))
 
@@ -278,8 +278,9 @@ deepspat_MSP <- function(f, data,
     }
 
     # trainvario = (tf$optimizers$Adam(learn_rates$vario))$minimize
-    trainvario <- function(loss_fn, var_list)
+    trainvario <- function(loss_fn, var_list) {
       train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$vario))
+    }
 
     nLFTlayers <- sum(sapply(layers, function(l) l$name) == "LFT")
     LFTidx <- which(sapply(layers, function(l) l$name) == "LFT")

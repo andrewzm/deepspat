@@ -2,6 +2,9 @@
 #' @description Prediction function for the fitted deepspat_ext object
 #' @param object a deepspat object obtained from fitting a deep compositional spatial model for extremes using r-Pareto processes.
 #' @param newdata a data frame containing the prediction locations.
+#' @param family a character string specifying the type of spatial warping; use "power_stat" for stationary and "power_nonstat" for non-stationary.
+#' @param dtype A character string indicating the data type for TensorFlow computations (\code{"float32"} or \code{"float64"}).
+#'   Default is \code{"float32"}#' @param ... currently unused.
 #' @return A list with the following components:
 #' \describe{
 #'   \item{srescaled}{A matrix of rescaled spatial coordinates produced by scaling the input locations.}
@@ -19,7 +22,7 @@ predict.deepspat_rPP <- function(object, newdata) {
   family <- d$family
   s_new_tf <- tf$constant(model.matrix(update(d$f, NULL ~ .), newdata),
                           dtype = dtype, name = "s")
-  s_new_in <- scale_0_5_tf(d$s_tf, d$scalings[[1]]$min, d$scalings[[1]]$max, dtype)
+  s_new_in <- scale_0_5_tf(s_new_tf, d$scalings[[1]]$min, d$scalings[[1]]$max, dtype)
   # risk <- d$risk
   # weight_fun <- d$weight_fun
   # dWeight_fun <- d$dWeight_fun
@@ -155,7 +158,8 @@ predict.deepspat_rPP <- function(object, newdata) {
 
     # G
     cat(">>> Precomputing global statistics...")
-    scale_factor <- 1 / (nrepli * (nrepli - 1))
+
+    # ---
     all_indices <- 0:(npairs - 1)
     all_pairs <- tf$squeeze(tf$transpose(tf$gather(pairs_tf, all_indices)), axis=0L)
     kall_tf <- all_pairs[[0]]
@@ -163,56 +167,61 @@ predict.deepspat_rPP <- function(object, newdata) {
     zk_tf <- tf$gather(d$z_tf, kall_tf)
     zl_tf <- tf$gather(d$z_tf, lall_tf)
     uklall_tf <- 1 / tf$maximum(zk_tf, zl_tf)  # (npairs, nrepli)
-    u_global_mean <- tf$reduce_mean(uklall_tf, axis = 1L, keepdims = TRUE)  # (npairs, 1)
-    ukl_centered <- uklall_tf - u_global_mean  # (npairs, nrepli)
+    uklall_mean <- tf$reduce_mean(uklall_tf, axis = 1L, keepdims = TRUE)  # (npairs, 1)
+    ukl_centered <- uklall_tf - uklall_mean  # (npairs, nrepli)
     theta_all <- nrepli / tf$reduce_sum(uklall_tf, axis = 1L)  # (npairs,)
     thetaSq_all <- tf$expand_dims(theta_all^2, axis = 1L)  # (npairs, 1)
     thetaSq_uc_all <- thetaSq_all * ukl_centered
+    # ---
 
+    scale_factor <- 1 / (nrepli * (nrepli - 1))
     # ---------------------
     var_theta_tf <- tf$reduce_sum(thetaSq_uc_all * thetaSq_uc_all, axis = 1L)
     G1_tf <- tf$reduce_sum(Xi*Xj*tf$reshape(var_theta_tf, c(-1L, 1L, 1L)), axis = 0L)*scale_factor
     # ---------------------
 
-    G2_tf <- tf$zeros(shape = c(2L, 2L), dtype = dtype)
-    batch_size <- 100L
-    total_batches <- npairs %/% batch_size
-    for (batch in 0:(total_batches - 1)) {
-      print(batch)
-      i_start <- as.integer(batch * batch_size)
-      i_end <- min(i_start + batch_size, npairs) - 1
-      bat_indices <- i_start:i_end
+    cond <- function(i_idx, G2) tf$less(i_idx, npairs - 1L)
+    body <- function(i_idx, G2) {
+      # print(i_idx)
+      rem_indices <- tf$range(i_idx + 1L, npairs)
 
-      a_batch <- tf$gather(jaco_loss, bat_indices)
+      ukl_centered_i <- ukl_centered[[i_idx]]
+      thetaSq_uc_i <- thetaSq_uc_all[[i_idx]]
+      jaco_i <- jaco_loss[[i_idx]]
 
-      for (k in 0:i_end) {
-        k <- as.integer(k)
-        i_idx <- i_start + k
+      ukl_centered_rem <- tf$gather(ukl_centered, rem_indices)
+      thetaSq_uc_rem <- tf$gather(thetaSq_uc_all, rem_indices)
+      jaco_rem <- tf$gather(jaco_loss, rem_indices)
 
-        ukl_centered_i <- tf$gather(ukl_centered, i_idx)
-        thetaSq_i <- tf$gather(thetaSq_all, i_idx)
-        thetaSq_uc_i <- tf$gather(thetaSq_uc_all, i_idx)
+      cov_theta_rem <- tf$matmul(
+        tf$expand_dims(thetaSq_uc_i, axis = 0L),
+        thetaSq_uc_rem,
+        transpose_b = TRUE)
 
-        rem_indices <- (i_idx + 1):(npairs - 1)
-        ukl_centered_rem <- tf$gather(ukl_centered, rem_indices)
-        thetaSq_rem <- tf$gather(thetaSq_all, rem_indices)
-        thetaSq_uc_rem <- tf$gather(thetaSq_uc_all, rem_indices)
+      jaco_i_epd <- tf$expand_dims(jaco_i, axis = 0L)  # [1, 2]
+      weighted_outer <- tf$matmul(
+        tf$reshape(jaco_i_epd, c(1L, 2L, 1L)),
+        tf$expand_dims(jaco_rem, axis = -2L)
+      ) * tf$reshape(cov_theta_rem, c(-1L, 1L, 1L))
 
-        # not rescaled
-        cov_theta_rem <- tf$matmul(tf$expand_dims(thetaSq_uc_i, axis = 0L),
-                                   thetaSq_uc_rem,
-                                   transpose_b = TRUE) #/ (nrepli - 1)
+      sum_update <- tf$reduce_sum(weighted_outer, axis = 0L) * scale_factor
+      new_G2 <- G2 + sum_update
 
-        jaco_i <- tf$expand_dims(jaco_loss[[i_idx]], axis = 0L)  # 形状 [1, 2]
-        jaco_rem <- tf$gather(jaco_loss, rem_indices)  # 形状 [n_rem, 2]
-
-        weighted_outer <- tf$matmul(tf$reshape(jaco_i, c(1L, 2L, 1L)),
-                                    tf$expand_dims(jaco_rem, axis = -2L)) *
-          tf$reshape(cov_theta_rem, c(-1L, 1L, 1L))
-
-        G2_tf <- G2_tf + tf$reduce_sum(weighted_outer, axis = 0L)*scale_factor
-      }
+      return(list(i_idx + 1L, new_G2))
     }
+
+    i0 <- tf$constant(0L)
+    G2_0 <- tf$zeros(shape = c(2L, 2L), dtype = dtype)
+    loop_result <- tf$while_loop(
+      cond = cond,
+      body = body,
+      loop_vars = list(i0, G2_0),
+      parallel_iterations = 1L,
+      swap_memory = TRUE
+    )
+    G2_tf <- loop_result[[2]]
+    # ---------------------
+
     G_tf <- G1_tf + 2*G2_tf
 
     H = as.matrix(H_tf)
@@ -220,6 +229,9 @@ predict.deepspat_rPP <- function(object, newdata) {
     Hinv = solve(H)
     Sigma_psi = (Hinv%*%G%*%Hinv)/nrepli
   }
+
+  gc(full = TRUE, verbose = FALSE)
+  tf$keras$backend$clear_session()
 
 
   list(srescaled = as.matrix(s_new_in),
