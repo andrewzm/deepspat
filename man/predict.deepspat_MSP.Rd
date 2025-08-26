@@ -4,7 +4,7 @@
 \alias{predict.deepspat_MSP}
 \title{Deep compositional spatial model for extremes}
 \usage{
-\method{predict}{deepspat_MSP}(object, newdata)
+\method{predict}{deepspat_MSP}(object, newdata, uncAss = T)
 }
 \arguments{
 \item{object}{a deepspat object obtained from fitting a deep compositional spatial model for extremes using max-stable processes.}

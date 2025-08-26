@@ -2,9 +2,6 @@
 #' @description Prediction function for the fitted deepspat_ext object
 #' @param object a deepspat object obtained from fitting a deep compositional spatial model for extremes using r-Pareto processes.
 #' @param newdata a data frame containing the prediction locations.
-#' @param family a character string specifying the type of spatial warping; use "power_stat" for stationary and "power_nonstat" for non-stationary.
-#' @param dtype A character string indicating the data type for TensorFlow computations (\code{"float32"} or \code{"float64"}).
-#'   Default is \code{"float32"}#' @param ... currently unused.
 #' @return A list with the following components:
 #' \describe{
 #'   \item{srescaled}{A matrix of rescaled spatial coordinates produced by scaling the input locations.}
