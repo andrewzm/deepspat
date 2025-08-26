@@ -121,13 +121,13 @@ pinvsolve <- function(A, b, reltol = 1e-6) {
   s <- A_SVD$d
   u <- A_SVD$u
   v <- A_SVD$v
-  
+
   # Invert s, clear entries lower than reltol*s[0].
   atol = max(s) * reltol
   s_mask = s[which(s > atol)]
   s_reciprocal <- 1/s_mask
   s_inv = diag(c(s_reciprocal, rep(0, length(s) - length(s_mask))))
-  
+
   # Compute v * s_inv * u_t * b from the left to avoid forming large intermediate matrices.
   v %*% (s_inv %*% (t(u) %*% b))
 }
@@ -137,7 +137,7 @@ list_to_listtf <- function(l, name, constant = TRUE, dtype = "float32") {
   stopifnot(is.list(l))
   stopifnot(is.character(name))
   stopifnot(is.logical(constant))
-  
+
   if(constant) tffun <- tf$constant else tffun <- tf$Variable
   lapply(1:length(l), function(i)
     tffun(l[[i]], name = paste0(name, i), dtype = dtype))
@@ -175,17 +175,17 @@ polygons_from_points <- function(df, every = 3) {
   # df must have s1c and s2c that are integers
   #               s1 and s2
   #               h1 and h2
-  
+
   s1c <- s2c <- NULL
   df <- df %>%  filter((s1c %% every == 0) & (s2c %% every == 0))
-  
+
   cells <- list()
   count <- 0
   for(i in 1:nrow(df)) {
     this_centroid <- df[i,]
     d <- filter(df, (s1c - this_centroid$s1c) < (every + 1) & (s1c - this_centroid$s1c)  >= 0 &
                   (s2c - this_centroid$s2c) < (every + 1) & (s2c - this_centroid$s2c >= 0))
-    
+
     if(nrow(d) == 4)  {
       count <- count + 1
       minlon_group = sort(d$s1)[1:2]; maxlon_group = sort(d$s1)[3:4]
@@ -194,7 +194,7 @@ polygons_from_points <- function(df, every = 3) {
       idx2 <- which(d$s1 %in% maxlon_group & d$s2 %in% minlat_group)
       idx3 <- which(d$s1 %in% maxlon_group & d$s2 %in% maxlat_group)
       idx4 <- which(d$s1 %in% minlon_group & d$s2 %in% maxlat_group)
-      
+
       this_cell <- data.frame(x = d$h1[c(idx1, idx2, idx3, idx4)],
                               y = d$h2[c(idx1, idx2, idx3, idx4)],
                               s1c = d$s1c[c(idx1, idx2, idx3, idx4)],
@@ -210,24 +210,24 @@ polygons_from_points <- function(df, every = 3) {
 #   # df must have s1c and s2c that are integers
 #   #               s1 and s2
 #   #               h1 and h2
-#   
+#
 #   s1c <- s2c <- NULL
 #   df <- df %>%  filter((s1c %% every == 0) & (s2c %% every == 0))
-#   
+#
 #   cells <- list()
 #   count <- 0
 #   for(i in 1:nrow(df)) {
 #     this_centroid <- df[i,]
 #     d <- filter(df, (s1c - this_centroid$s1c) < (every + 1) & (s1c - this_centroid$s1c)  >= 0 &
 #                   (s2c - this_centroid$s2c) < (every + 1) & (s2c - this_centroid$s2c >= 0))
-#     
+#
 #     if(nrow(d) == 4)  {
 #       count <- count + 1
 #       idx1 <- which(d$s1 == min(d$s1) & d$s2 == min(d$s2))
 #       idx2 <- which(d$s1 == max(d$s1) & d$s2 == min(d$s2))
 #       idx3 <- which(d$s1 == max(d$s1) & d$s2 == max(d$s2))
 #       idx4 <- which(d$s1 == min(d$s1) & d$s2 == max(d$s2))
-#       
+#
 #       this_cell <- data.frame(x = d$h1[c(idx1, idx2, idx3, idx4)],
 #                               y = d$h2[c(idx1, idx2, idx3, idx4)],
 #                               s1c = d$s1c[c(idx1, idx2, idx3, idx4)],
@@ -238,3 +238,20 @@ polygons_from_points <- function(df, every = 3) {
 #   }
 #   data.table::rbindlist(cells)
 # }
+
+
+covert_pair_k_to_ij <- function(k, n = 124750) {
+  # cast to numeric (double) for sqrt, safe because p <= ~7.78e9 << 2^53
+  k <- as.numeric(k)
+  p <- k - 1
+  const <- 2 * n - 1
+  # compute i
+  i0 <- floor((const - sqrt(const^2 - 8 * p)) / 2)
+  # compute S_i
+  S_i <- i0 * (2 * n - i0 - 1) / 2
+  j0 <- i0 + 1 + (p - S_i)
+  # convert to output
+  i1 <- as.integer(i0 + 1)
+  j1 <- as.integer(j0 + 1)
+  return(cbind(i = i1, j = j1))  # two-column matrix: i, j
+}

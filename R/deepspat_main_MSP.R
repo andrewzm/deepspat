@@ -383,54 +383,6 @@ deepspat_MSP <- function(f, data,
   ptm2 <- Sys.time();
   ptm <- ptm2-ptm1
 
-  # # ------------------------------
-  # jaco_loss = NULL
-  # cat("Evauating Jacobian... \n")
-  # if (method %in% c("MPL", "MRPL")) {
-  #   deppar <- tf$Variable(c(exp(logphi_tf), 2*tf$sigmoid(logitkappa_tf)))
-  #   if (method == "MRPL") {
-  #     pairs1 = pairs_all[sample(1:nrow(pairs_all), round(nrow(pairs_all)*p)),]
-  #     pairs_samp_tf =  tf$reshape(tf$constant(pairs1, dtype = tf$int32),
-  #                                  c(nrow(pairs1), ncol(pairs1), 1L))
-  #   } else if (method == "MPL") { pairs_samp_tf = pairs_tf }
-  #
-  #   Cost_fn1 = function(deppar, pairs_unc_tf) {
-  #     logphi_tf = tf$math$log(deppar[1])
-  #     logitkappa_tf = tf$math$log(deppar[2]/(2-deppar[2]))
-  #     loss_obj <- nLogPairLike1(logphi_tf = logphi_tf,
-  #                               logitkappa_tf = logitkappa_tf,
-  #                               s_tf = swarped_out,
-  #                               z_tf = z_tf,
-  #                               pairs_tf = pairs_unc_tf, #pairs_all_tf,
-  #                               dtype = dtype)
-  #     loss_obj$Cost_items
-  #   }
-  #
-  #   # don't use tape
-  #   del = 1e-8
-  #   deppar_del1 = tf$Variable(deppar + c(del, 0))
-  #   deppar_del2 = tf$Variable(deppar + c(0, del))
-  #   cost0 = Cost_fn1(deppar, pairs_samp_tf)
-  #   cost1 = Cost_fn1(deppar_del1, pairs_samp_tf)
-  #   cost2 = Cost_fn1(deppar_del2, pairs_samp_tf)
-  #   deri1 = (cost1 - cost0)/del
-  #   deri2 = (cost2 - cost0)/del
-  #   jaco_loss = tf$stack(list(deri1, deri2), axis = 2L)
-  #
-  #   # use tape
-  #   # compute_jaco <- function(pair0_tf) {
-  #   #   pair0_tf = tf$expand_dims(pair0_tf, axis = 0L)
-  #   #   with (tf$GradientTape(persistent=T) %as% tape, {
-  #   #     tape$watch(deppar)
-  #   #     loss <- Cost_fn1(deppar, pair0_tf)
-  #   #   })
-  #   #   jaco <- tape$jacobian(loss, deppar)
-  #   # }
-  #   # jaco_loss <- tf$map_fn(fn = compute_jaco, elems = pairs_samp_tf, dtype = deppar$dtype)
-  #   # jaco_loss = tf$squeeze(jaco_loss, axis = 2L)
-  # }
-  # # ------------------------------
-
 
   deepspat.obj <- list(layers = layers,
                        Cost = Cost_fn(),
