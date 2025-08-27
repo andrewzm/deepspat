@@ -4,12 +4,16 @@
 \alias{predict.deepspat_MSP}
 \title{Deep compositional spatial model for extremes}
 \usage{
-\method{predict}{deepspat_MSP}(object, newdata, uncAss = T)
+\method{predict}{deepspat_MSP}(object, newdata, uncAss = T, weights = NULL)
 }
 \arguments{
 \item{object}{a deepspat object obtained from fitting a deep compositional spatial model for extremes using max-stable processes.}
 
 \item{newdata}{a data frame containing the prediction locations.}
+
+\item{uncAss}{assess the uncertainty of dependence parameters or not}
+
+\item{weights}{weights for weighted least square inference method}
 }
 \value{
 A list with the following components:

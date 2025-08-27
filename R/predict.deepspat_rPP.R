@@ -5,7 +5,6 @@
 #' @param uncAss assess the uncertainty of dependence parameters or not
 #' @param weights weights for weighted least square inference method
 #' @param uprime uprime for weighted least square inference method
-#'   Default is \code{"float32"}#' @param ... currently unused.
 #' @return A list with the following components:
 #' \describe{
 #'   \item{srescaled}{A matrix of rescaled spatial coordinates produced by scaling the input locations.}

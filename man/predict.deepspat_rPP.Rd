@@ -4,12 +4,18 @@
 \alias{predict.deepspat_rPP}
 \title{Deep compositional spatial model for extremes}
 \usage{
-\method{predict}{deepspat_rPP}(object, newdata)
+\method{predict}{deepspat_rPP}(object, newdata, uncAss = T, weights = NULL, uprime = NULL)
 }
 \arguments{
 \item{object}{a deepspat object obtained from fitting a deep compositional spatial model for extremes using r-Pareto processes.}
 
 \item{newdata}{a data frame containing the prediction locations.}
+
+\item{uncAss}{assess the uncertainty of dependence parameters or not}
+
+\item{weights}{weights for weighted least square inference method}
+
+\item{uprime}{uprime for weighted least square inference method}
 }
 \value{
 A list with the following components:
