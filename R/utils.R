@@ -240,8 +240,7 @@ polygons_from_points <- function(df, every = 3) {
 # }
 
 
-covert_pair_k_to_ij <- function(k, n = 124750) {
-  # cast to numeric (double) for sqrt, safe because p <= ~7.78e9 << 2^53
+covert_pair_indicies <- function(k, n) {
   k <- as.numeric(k)
   p <- k - 1
   const <- 2 * n - 1

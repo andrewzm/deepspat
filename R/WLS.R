@@ -53,7 +53,11 @@ LeastSquares <- function(logphi_tf, logitkappa_tf,
   } else if (weight_type == "distance") {
     weights_tf = 1/D.pairs_tf
   } else if (weight_type == "dependence") {
-    weights_tf = 1/edm_emp_tf # stronger dependence indicates larger weights
+    # stronger dependence indicates larger weights
+    ctl_size <- min(50000L, length(edm_emp_tf))
+    ctl_thre <- tf$sort(edm_emp_tf, direction = "ASCENDING")[ctl_size]
+    weights_tf = tf$maximum(ctl_thre - edm_emp_tf, 0)
+    # weights_tf = 1/edm_emp_tf
   }
 
   Cost = tf$reduce_sum(weights_tf * tf$pow(tf$subtract(edm_emp_tf, ec_tf), 2))
