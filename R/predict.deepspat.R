@@ -10,7 +10,15 @@
 #'  \item{"allsims"}{Combined simulations from the Gaussian mixtures (SDSP only)}
 #'  }
 #' @export
-
+#' @examples
+#' \dontrun{
+#' df <- data.frame(s = rnorm(100), z = rnorm(100))
+#' dfnew <- data.frame(s = rnorm(20))
+#' layers <- c(AWU(r = 50L, dim = 1L, grad = 200, lims = c(-0.5, 0.5)),
+#'             bisquares1D(r = 50))
+#'   d <- deepspat(f = z ~ s - 1, data = df, layers = layers, method = "ML", nsteps = 100L)
+#'   pred <- predict(d, dfnew)
+#' }
 predict.deepspat <- function(object, newdata, nsims = 100L, ...) {
 
   d <- object

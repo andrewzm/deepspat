@@ -26,6 +26,8 @@ init_learn_rates(
 
 \item{eta_mean}{learning rate for the weight estimates or variational means}
 
+\item{eta_mean2}{learning rate for the weight estimates or variational means}
+
 \item{eta_sd}{learning rate for the variational standard deviations (SDSP only)}
 
 \item{LFTpars}{learning rate for the parameters of the Mobius transformation}
@@ -33,6 +35,8 @@ init_learn_rates(
 \item{AFFpars}{learning rate for the parameters of the affine transformation}
 
 \item{rho}{learning rate for the correlation parameter in the multivariate model}
+
+\item{vario}{learning rate for the parameter in the variogram}
 }
 \value{
 \code{init_learn_rates} returns a list with the learning rates. Call \code{str(init_learn_rates())} to see the

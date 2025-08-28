@@ -36,6 +36,8 @@ deepspat_nn_GP(
 
 \item{method}{identifying the method for finding the estimates}
 
+\item{family}{identifying the family of the model constructed}
+
 \item{par_init}{list of initial parameter values. Call the function \code{initvars()} to see the structure of the list}
 
 \item{learn_rates}{learning rates for the various quantities in the model. Call the function \code{init_learn_rates()} to see the structure of the list}

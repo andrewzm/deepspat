@@ -2,6 +2,7 @@
 #' @description Prediction function for the fitted deepspat_nn_ST_GP object
 #' @param object the deepspat_nn_ST_GP object
 #' @param newdata data frame containing the prediction locations
+#' @param nn_id nearest neighbors index
 #' @param ... currently unused
 #' @return \code{predict.deepspat_nn_ST_GP} returns a list with the following item
 #' \describe{

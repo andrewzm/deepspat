@@ -8,6 +8,8 @@ AFF_2D(a = c(0, 1, 0, 0, 0, 1), dtype = "float32")
 }
 \arguments{
 \item{a}{vector of six real numbers describing an affine transformation on a 2D domain}
+
+\item{dtype}{data type}
 }
 \value{
 \code{AFF_2D} returns a list containing a list with the following components:

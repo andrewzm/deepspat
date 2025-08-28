@@ -10,6 +10,8 @@ bisquares2D(r = 30, lims = c(-0.5, 0.5), dtype = "float32")
 \item{r}{30}
 
 \item{lims}{the bounded 1D domain on which to set up the bisquare functions}
+
+\item{dtype}{data type}
 }
 \value{
 \code{bisquares1D} returns a list containing a list with the following components:

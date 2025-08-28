@@ -4,6 +4,7 @@
 #' It returns a list containing all the functions in the single-resolution RBF unit. See Value for more details.
 #' @param res the resolution
 #' @param lims the limits of one side of the square 2D domain on which to set up the RBFs
+#' @param dtype data type
 #' @return \code{RBF_block} returns a list containing a list for each RBF in the block with the following components:
 #' \describe{
 #'  \item{"f"}{An encapsulated function that takes an input and evaluates the RBF over some input using \code{TensorFlow}}
@@ -15,7 +16,10 @@
 #'  \item{"name"}{Name of layer}
 #' }
 #' @export
-
+#' @examples
+#' \dontrun{
+#' layer <- RBF_block(res = 1L)
+#' }
 RBF_block <- function(res = 1L, lims = c(-0.5, 0.5), dtype = "float32") {
   
   ## Parameters appearing in sigmoid (grad, loc)

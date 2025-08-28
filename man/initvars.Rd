@@ -28,6 +28,10 @@ initvars(
 
 \item{nu}{initial value for the smoothness parameter}
 
+\item{variogram_logrange}{initial value for variogram_logrange}
+
+\item{variogram_logitdf}{initial value for variogram_logitdf}
+
 \item{transeta_mean_init}{list of initial values for the initial weights (or the initial variational means of these weights). The list
 contains five values, one for the AWU, one for the RBF, one for the LFT (Mobius), and two for the affine transformation}
 

@@ -9,6 +9,8 @@
 #' @param transeta_mean_prior same as \code{transeta_mean_init} but for the prior mean of the weights (SDSP only)
 #' @param transeta_sd_init same as \code{transeta_mean_init} but for the variational standard deviations (SDSP only)
 #' @param transeta_sd_prior same as \code{transeta_mean_init} but for the preior standard deviations of the weights (SDSP only)
+#' @param variogram_logrange initial value for variogram_logrange
+#' @param variogram_logitdf initial value for variogram_logitdf
 #' @return \code{initvars} returns a list with the initial values. Call \code{str(initvars())} to see the structure of this list.
 #' @export
 

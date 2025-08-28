@@ -10,6 +10,8 @@ RBF_block(res = 1L, lims = c(-0.5, 0.5), dtype = "float32")
 \item{res}{the resolution}
 
 \item{lims}{the limits of one side of the square 2D domain on which to set up the RBFs}
+
+\item{dtype}{data type}
 }
 \value{
 \code{RBF_block} returns a list containing a list for each RBF in the block with the following components:
@@ -27,4 +29,9 @@ RBF_block(res = 1L, lims = c(-0.5, 0.5), dtype = "float32")
 Sets up a composition of radial basis functions (RBFs) for used in a deep compositional spatial model. The function
 sets up RBFs on a prescribed domain on a grid at a certain resolution.
 It returns a list containing all the functions in the single-resolution RBF unit. See Value for more details.
+}
+\examples{
+\dontrun{
+layer <- RBF_block(res = 1L)
+}
 }

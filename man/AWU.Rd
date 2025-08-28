@@ -14,6 +14,8 @@ AWU(r = 50L, dim = 1L, grad = 200, lims = c(-0.5, 0.5), dtype = "float32")
 \item{grad}{steepness of the sigmoid functions}
 
 \item{lims}{the bounded 1D domain on which to set up the sigmoids}
+
+\item{dtype}{data type}
 }
 \value{
 \code{AWU} returns a list containing a list with the following components:
@@ -32,4 +34,9 @@ Sets up an axial warping unit (AWU) for used in a deep compositional spatial mod
 sets up sigmoids on a prescribed domain at regular intervals, with 'steepness' dicated by the user.
 It returns a list of length 1 containing an axial warping unit (AWU) and several encapsulated
 functions that evaluate the AWU over inputs of different types. See Value for more details.
+}
+\examples{
+\dontrun{
+layer <- AWU(r = 50L, dim = 1L, grad = 200, lims = c(-0.5, 0.5))
+}
 }

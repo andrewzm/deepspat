@@ -4,10 +4,12 @@
 #' @param covfun learning rate for the covariance-function (or matrix) parameters at the top layer
 #' @param sigma2eta learning rate for the process variance
 #' @param eta_mean learning rate for the weight estimates or variational means
+#' @param eta_mean2 learning rate for the weight estimates or variational means
 #' @param eta_sd learning rate for the variational standard deviations (SDSP only)
 #' @param LFTpars learning rate for the parameters of the Mobius transformation
 #' @param AFFpars learning rate for the parameters of the affine transformation
 #' @param rho learning rate for the correlation parameter in the multivariate model
+#' @param vario learning rate for the parameter in the variogram
 #' @return \code{init_learn_rates} returns a list with the learning rates. Call \code{str(init_learn_rates())} to see the
 #' structure of this list.
 #' @export

@@ -5,6 +5,7 @@
 #' @param g formula identifying the independent variables in the linear trend
 #' @param layers list containing the nonstationary warping layers
 #' @param method identifying the method for finding the estimates
+#' @param family identifying the family of the model constructed
 #' @param par_init list of initial parameter values. Call the function \code{initvars()} to see the structure of the list
 #' @param learn_rates learning rates for the various quantities in the model. Call the function \code{init_learn_rates()} to see the structure of the list
 #' @param nsteps number of steps when doing gradient descent times two or three (depending on the family of model)  

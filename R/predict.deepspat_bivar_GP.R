@@ -12,7 +12,18 @@
 #'  \item{"newdata_swarped2"}{New prediction locations on the warped domain (for the second process)}
 #'  }
 #' @export
-
+#' @examples
+#' \dontrun{
+#' df <- data.frame(s1 = rnorm(100), s2 = rnorm(100), z1 = rnorm(100), z2 = rnorm(100))
+#' dfnew <- data.frame(s1 = rnorm(20), s2 = rnorm(20))
+#' layers <- c(AWU(r = 50, dim = 1L, grad = 200, lims = c(-0.5, 0.5)))
+#' d <- deepspat_bivar_GP(f = z1 + z2 ~ s1 + s2 - 1,
+#'                        data = df, g = ~ 1,
+#'                        layers = layers, method = "REML",
+#'                        family = "matern_nonstat_symm",
+#'                        nsteps = 100L)
+#'   pred <- predict.deepspat_bivar_GP(d, dfnew)
+#' }
 predict.deepspat_bivar_GP <- function(object, newdata, ...) {
   # object = d3; newdata = alldata
   
@@ -146,7 +157,7 @@ predict.deepspat_bivar_GP <- function(object, newdata, ...) {
   }
   
   # cov_matern_tf
-  if (family %in% c("matern_stat_symm",
+  if (d$family %in% c("matern_stat_symm",
                     "matern_stat_asymm",
                     "matern_nonstat_symm",
                     "matern_nonstat_asymm")) {
@@ -174,7 +185,7 @@ predict.deepspat_bivar_GP <- function(object, newdata, ...) {
   }
   
   # exp cov fn
-  if (family %in% c("exp_stat_symm",
+  if (d$family %in% c("exp_stat_symm",
                     "exp_stat_asymm",
                     "exp_nonstat_symm",
                     "exp_nonstat_asymm")) {
