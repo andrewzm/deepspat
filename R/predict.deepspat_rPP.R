@@ -3,8 +3,9 @@
 #' @param object a deepspat object obtained from fitting a deep compositional spatial model for extremes using r-Pareto processes.
 #' @param newdata a data frame containing the prediction locations.
 #' @param uncAss assess the uncertainty of dependence parameters or not
-#' @param weights weights for weighted least square inference method
+#' @param edm_emp empirical estimates of extremal dependence meansure for weighted least square inference method
 #' @param uprime uprime for weighted least square inference method
+#'   Default is \code{"float32"}#' @param ... currently unused.
 #' @return A list with the following components:
 #' \describe{
 #'   \item{srescaled}{A matrix of rescaled spatial coordinates produced by scaling the input locations.}
@@ -15,7 +16,7 @@
 #' }
 #' @export
 
-predict.deepspat_rPP <- function(object, newdata, uncAss = T, weights = NULL,
+predict.deepspat_rPP <- function(object, newdata, uncAss = T, edm_emp = NULL,
                                  uprime = NULL) {
 
   d <- object
@@ -130,7 +131,7 @@ predict.deepspat_rPP <- function(object, newdata, uncAss = T, weights = NULL,
 
       dcep1_tf = CEP_fn(deppar, pairs_tf)$dcep1_tf
       dcep2_tf = CEP_fn(deppar, pairs_tf)$dcep2_tf
-        jaco_loss = tf$stack(list(dcep1_tf, dcep2_tf), axis = 1L)
+      jaco_loss = tf$stack(list(dcep1_tf, dcep2_tf), axis = 1L)
     }
     # ------------------------------
 
@@ -150,7 +151,17 @@ predict.deepspat_rPP <- function(object, newdata, uncAss = T, weights = NULL,
       Ginv <- Jinv %*% K %*% t(Jinv) / dim(d$z_tf)[2]
       Sigma_psi <- Ginv
     } else if (d$method == "WLS") {
-      weights_tf = tf$constant(weights, dtype)
+      edm_emp_tf <- tf$constant(edm_emp, dtype=dtype)
+
+      ctl_size <- min(50000L, length(edm_emp))
+      ctl_thre <- sort(edm_emp)[ctl_size+1]
+      ctl <- tf$maximum(ctl_thre - edm_emp_tf, 0)
+      weights_tf <- tf$maximum(2 - edm_emp_tf, 0)
+        # 1/edm_emp_tf
+
+      ids_eff <- tf$squeeze(tf$where(ctl != 0))
+      jaco_loss <- tf$gather(jaco_loss, ids_eff)
+      weights_tf <- tf$gather(weights_tf, ids_eff)
 
       npairs <- as.integer(tf$shape(jaco_loss)[1])
       nrepli <- dim(d$z_tf)[2]
@@ -168,59 +179,85 @@ predict.deepspat_rPP <- function(object, newdata, uncAss = T, weights = NULL,
       cep.pairs_ele = t(do.call("cbind", sapply(1:(nrow(exceed)-1), function(i) {
         # print(i/nrow(exceed))
         sapply((i+1):nrow(exceed), function(j) {
-          exceeds_id1 = exceed[i,]>uprime[i]
-          exceeds_id2 = exceed[j,]>uprime[j]
+          exceeds_id1 = exceed[i,]>uprime
+          exceeds_id2 = exceed[j,]>uprime
           nume = exceeds_id1 & exceeds_id2
           deno = exceeds_id1 + exceeds_id2
           c(nume, deno)
-        }) })) )
+        }) })) )[as.numeric(ids_eff)+1,]
 
       B = 100
-      cep.pairs_boot = sapply(1:B, function(b) {
+      cep.pairs_boot <- sapply(1:B, function(b) {
         samp_b = sample(1:nrepli, nrepli, replace = T)
         cep.pairs_b = rowSums(cep.pairs_ele[,samp_b]) /
           (0.5*rowSums(cep.pairs_ele[,nrepli+samp_b]))
         cep.pairs_b[is.na(cep.pairs_b)] = 0
         cep.pairs_b
       })
+      cep.pairs_boot_tf <- tf$constant(cep.pairs_boot, dtype)
+      mean_row <- tf$reduce_mean(cep.pairs_boot_tf, axis = 1L, keepdims = TRUE)
+      center_row <- cep.pairs_boot_tf - mean_row
+      # cov_sum_all <- tf$matmul(center_row, center_row, transpose_b = TRUE)/(B-1)
 
       scale_factor <- 1 #1 / (nrepli * (nrepli - 1))
       # ---------------------
-      var_theta_tf <- tf$constant(apply(cep.pairs_boot, 1, var), dtype)
+      var_theta_tf <- tf$reduce_sum(tf$square(center_row), axis = 1L)/(B-1)
+      # var_theta_tf <- tf$linalg$diag_part(cov_sum_all)
       weighted_outer1 <- Xi*Xj*tf$reshape(var_theta_tf, c(-1L, 1L, 1L))*
         tf$reshape(weights_tf^2, c(-1L, 1L, 1L))
       G1_tf <- tf$reduce_sum(weighted_outer1, axis = 0L)*scale_factor
       # ---------------------
 
-      # approximate matrix G with a subset
-      n_comb_pairs <- npairs*(npairs - 1)/2; size_samp <- min(1000000, n_comb_pairs)
-      sample_k = sample(n_comb_pairs, size_samp)
-      sample_pair_indices = covert_pair_k_to_ij(sample_k, npairs) - 1L
+      batch_size <- 100000
+      batch_n <- as.integer((npairs*(npairs - 1)/2) / batch_size) + 1L
+      cond <- function(i_idx, G2) tf$less(i_idx, batch_n - 1L)
+      body <- function(i_idx, G2) {
+        # print(i_idx)
+        start_id <- batch_size*as.integer(i_idx) + 1
+        end_id <- min(batch_size*as.integer(i_idx) + batch_size, npairs*(npairs - 1)/2)
+        batch_indices <-  start_id:end_id
+        batch_pair_indices <- covert_pair_indicies(batch_indices, npairs) - 1L
 
-      col1_indicies <- tf$constant(sample_pair_indices[,1], dtype=tf$int32)
-      col2_indicies <-  tf$constant(sample_pair_indices[,2], dtype=tf$int32)
+        col1_indicies <- tf$constant(batch_pair_indices[,1], dtype=tf$int32)
+        col2_indicies <-  tf$constant(batch_pair_indices[,2], dtype=tf$int32)
 
-      # Compute empirical cov of CEPs
-      cov_theta <- tf$constant(sapply(1:size_samp, function(k) {
-        cov(cep.pairs_boot[sample_pair_indices[k,1]+1,],
-            cep.pairs_boot[sample_pair_indices[k,2]+1,])
-      }), dtype)
+        # Compute empirical cov of CEPs
+        center_1 <- tf$gather(center_row, col1_indicies)
+        center_2 <- tf$gather(center_row, col2_indicies)
+        cov_tf <- tf$reduce_sum(center_1 * center_2, axis = 1L)/(B-1)
 
-      # Jacobian and weights
-      jaco_1 <- tf$gather(jaco_loss, col1_indicies)
-      weights_1 <- tf$gather(weights_tf, col1_indicies)
-      jaco_2 <- tf$gather(jaco_loss, col1_indicies)
-      weights_2 <- tf$gather(weights_tf, col2_indicies)
+        # Jacobian and weights
+        jaco_1 <- tf$gather(jaco_loss, col1_indicies)
+        weights_1 <- tf$gather(weights_tf, col1_indicies)
+        jaco_2 <- tf$gather(jaco_loss, col1_indicies)
+        weights_2 <- tf$gather(weights_tf, col2_indicies)
 
-      weighted_outer2 <- tf$matmul(
-        tf$expand_dims(jaco_1, axis = -1L),
-        tf$expand_dims(jaco_2, axis = -2L)
-      ) * (tf$reshape(cov_theta, c(-1L, 1L, 1L)) *
-             tf$reshape(weights_1, c(-1L, 1L, 1L)) *
-             tf$reshape(weights_2, c(-1L, 1L, 1L)))
+        weighted_outer2 <- tf$matmul(
+          tf$expand_dims(jaco_1, axis = -1L),
+          tf$expand_dims(jaco_2, axis = -2L)
+        ) * (tf$reshape(cov_tf, c(-1L, 1L, 1L)) *
+               tf$reshape(weights_1, c(-1L, 1L, 1L)) *
+               tf$reshape(weights_2, c(-1L, 1L, 1L)))
 
-      G2_tf <- tf$reduce_sum(weighted_outer2, axis = 0L) *
-        (n_comb_pairs/size_samp) * scale_factor
+        sum_update <- tf$reduce_sum(weighted_outer2, axis = 0L) * scale_factor
+        new_G2 <- G2 + sum_update
+
+        return(list(i_idx + 1L, new_G2))
+      }
+
+      i0 <- tf$constant(0L)
+      G2_0 <- tf$zeros(shape = c(2L, 2L), dtype = dtype)
+      t1 <- Sys.time()
+      loop_result <- tf$while_loop(
+        cond = cond,
+        body = body,
+        loop_vars = list(i0, G2_0),
+        parallel_iterations = 1L,
+        swap_memory = TRUE
+      )
+      t2 <- Sys.time()
+
+      G2_tf <- loop_result[[2]]
       # ---------------------
 
       G_tf <- G1_tf + 2*G2_tf
@@ -229,13 +266,12 @@ predict.deepspat_rPP <- function(object, newdata, uncAss = T, weights = NULL,
       G = as.matrix(G_tf)
       Hinv = solve(H)
       Sigma_psi = (Hinv%*%G%*%Hinv)/nrepli
-      # sqrt(diag(Sigma_psi))
     }
   }
+  cat("Done. \n")
 
   gc(full = TRUE, verbose = FALSE)
   tf$keras$backend$clear_session()
-
 
   list(srescaled = as.matrix(s_new_in),
        swarped = as.matrix(s_new_out),
