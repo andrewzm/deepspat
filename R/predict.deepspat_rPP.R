@@ -3,7 +3,7 @@
 #' @param object a deepspat object obtained from fitting a deep compositional spatial model for extremes using r-Pareto processes.
 #' @param newdata a data frame containing the prediction locations.
 #' @param uncAss assess the uncertainty of dependence parameters or not
-#' @param weights weights for weighted least square inference method
+#' @param edm_emp empirical estimates of extremal dependence meansure for weighted least square inference method
 #' @param uprime uprime for weighted least square inference method
 #'   Default is \code{"float32"}#' @param ... currently unused.
 #' @return A list with the following components:
@@ -131,7 +131,7 @@ predict.deepspat_rPP <- function(object, newdata, uncAss = T, edm_emp = NULL,
 
       dcep1_tf = CEP_fn(deppar, pairs_tf)$dcep1_tf
       dcep2_tf = CEP_fn(deppar, pairs_tf)$dcep2_tf
-        jaco_loss = tf$stack(list(dcep1_tf, dcep2_tf), axis = 1L)
+      jaco_loss = tf$stack(list(dcep1_tf, dcep2_tf), axis = 1L)
     }
     # ------------------------------
 
@@ -151,13 +151,15 @@ predict.deepspat_rPP <- function(object, newdata, uncAss = T, edm_emp = NULL,
       Ginv <- Jinv %*% K %*% t(Jinv) / dim(d$z_tf)[2]
       Sigma_psi <- Ginv
     } else if (d$method == "WLS") {
+      edm_emp_tf <- tf$constant(edm_emp, dtype=dtype)
+
       ctl_size <- min(50000L, length(edm_emp))
       ctl_thre <- sort(edm_emp)[ctl_size+1]
-      edm_emp_tf <- tf$constant(edm_emp, dtype=dtype)
-      weights <- tf$maximum(ctl_thre - edm_emp_tf, 0)
-      weights_tf <- tf$constant(weights, dtype)
+      ctl <- tf$maximum(ctl_thre - edm_emp_tf, 0)
+      weights_tf <- tf$maximum(2 - edm_emp_tf, 0)
+        # 1/edm_emp_tf
 
-      ids_eff <- tf$squeeze(tf$where(weights_tf != 0))
+      ids_eff <- tf$squeeze(tf$where(ctl != 0))
       jaco_loss <- tf$gather(jaco_loss, ids_eff)
       weights_tf <- tf$gather(weights_tf, ids_eff)
 
@@ -177,8 +179,8 @@ predict.deepspat_rPP <- function(object, newdata, uncAss = T, edm_emp = NULL,
       cep.pairs_ele = t(do.call("cbind", sapply(1:(nrow(exceed)-1), function(i) {
         # print(i/nrow(exceed))
         sapply((i+1):nrow(exceed), function(j) {
-          exceeds_id1 = exceed[i,]>uprime[i]
-          exceeds_id2 = exceed[j,]>uprime[j]
+          exceeds_id1 = exceed[i,]>uprime
+          exceeds_id2 = exceed[j,]>uprime
           nume = exceeds_id1 & exceeds_id2
           deno = exceeds_id1 + exceeds_id2
           c(nume, deno)
@@ -210,7 +212,7 @@ predict.deepspat_rPP <- function(object, newdata, uncAss = T, edm_emp = NULL,
       batch_n <- as.integer((npairs*(npairs - 1)/2) / batch_size) + 1L
       cond <- function(i_idx, G2) tf$less(i_idx, batch_n - 1L)
       body <- function(i_idx, G2) {
-        print(i_idx)
+        # print(i_idx)
         start_id <- batch_size*as.integer(i_idx) + 1
         end_id <- min(batch_size*as.integer(i_idx) + batch_size, npairs*(npairs - 1)/2)
         batch_indices <-  start_id:end_id
@@ -264,13 +266,12 @@ predict.deepspat_rPP <- function(object, newdata, uncAss = T, edm_emp = NULL,
       G = as.matrix(G_tf)
       Hinv = solve(H)
       Sigma_psi = (Hinv%*%G%*%Hinv)/nrepli
-      # sqrt(diag(Sigma_psi))
     }
   }
+  cat("Done. \n")
 
   gc(full = TRUE, verbose = FALSE)
   tf$keras$backend$clear_session()
-
 
   list(srescaled = as.matrix(s_new_in),
        swarped = as.matrix(s_new_out),

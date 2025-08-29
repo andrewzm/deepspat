@@ -3,7 +3,7 @@
 #' @param object a deepspat object obtained from fitting a deep compositional spatial model for extremes using max-stable processes.
 #' @param newdata a data frame containing the prediction locations.
 #' @param uncAss assess the uncertainty of dependence parameters or not
-#' @param weights weights for weighted least square inference method
+#' @param edm_emp empirical estimates of extremal dependence meansure for weighted least square inference method
 #' @return A list with the following components:
 #' \describe{
 #'   \item{srescaled}{A matrix of rescaled spatial coordinates produced by scaling the input locations.}
@@ -166,13 +166,15 @@ predict.deepspat_MSP <- function(object, newdata, uncAss = T, edm_emp = NULL) {
       # Sigma_psi = (Jinv%*%K%*%Jinv + Jinv)/dim(d$z_tf)[2]
       Sigma_psi = (Jinv%*%K1%*%Jinv + Jinv/p1)/nrepli
     } else if (d$method == "WLS") {
+      edm_emp_tf <- tf$constant(edm_emp, dtype=dtype)
+
       ctl_size <- min(50000L, length(edm_emp))
       ctl_thre <- sort(edm_emp)[ctl_size+1]
-      edm_emp_tf <- tf$constant(edm_emp, dtype=dtype)
-      weights <- tf$maximum(ctl_thre - edm_emp_tf, 0)
-      weights_tf <- tf$constant(weights, dtype)
+      ctl <- tf$maximum(ctl_thre - edm_emp_tf, 0)
+      weights_tf <- tf$maximum(2 - edm_emp_tf, 0)
+        # 1/edm_emp_tf
 
-      ids_eff <- tf$squeeze(tf$where(weights_tf != 0))
+      ids_eff <- tf$squeeze(tf$where(ctl != 0))
       jaco_loss <- tf$gather(jaco_loss, ids_eff)
       weights_tf <- tf$gather(weights_tf, ids_eff)
 
@@ -266,15 +268,14 @@ predict.deepspat_MSP <- function(object, newdata, uncAss = T, edm_emp = NULL) {
       # ---------------------
 
       G_tf <- G1_tf + 2*G2_tf
-      # G_tf <- nrepli*G_tf
 
       H = as.matrix(H_tf)
       G = as.matrix(G_tf)
       Hinv = solve(H)
       Sigma_psi = (Hinv%*%G%*%Hinv)/nrepli
-      # sqrt(diag(Sigma_psi))
     }
   }
+  cat("Done. \n")
 
   gc(full = TRUE, verbose = FALSE)
   tf$keras$backend$clear_session()
