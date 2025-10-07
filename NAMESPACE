@@ -2,11 +2,11 @@
 
 S3method(predict,deepspat)
 S3method(predict,deepspat_GP)
-S3method(predict,deepspat_MSP)
+S3method(summary,deepspat_MSP)
 S3method(predict,deepspat_bivar_GP)
 S3method(predict,deepspat_nn_GP)
 S3method(predict,deepspat_nn_ST_GP)
-S3method(predict,deepspat_rPP)
+S3method(summary,deepspat_rPP)
 S3method(predict,deepspat_trivar_GP)
 export(AFF_1D)
 export(AFF_2D)
