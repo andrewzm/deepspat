@@ -16,7 +16,7 @@
 #' }
 #' @export
 
-predict.deepspat_rPP <- function(object, newdata, uncAss = T, edm_emp = NULL,
+summary.deepspat_rPP <- function(object, newdata, uncAss = T, edm_emp = NULL,
                                  uprime = NULL) {
 
   d <- object
@@ -25,9 +25,6 @@ predict.deepspat_rPP <- function(object, newdata, uncAss = T, edm_emp = NULL,
   s_new_tf <- tf$constant(model.matrix(update(d$f, NULL ~ .), newdata),
                           dtype = dtype, name = "s")
   s_new_in <- scale_0_5_tf(s_new_tf, d$scalings[[1]]$min, d$scalings[[1]]$max, dtype)
-  # risk <- d$risk
-  # weight_fun <- d$weight_fun
-  # dWeight_fun <- d$dWeight_fun
 
   # warped space
   if (family == "power_stat") {
@@ -82,7 +79,6 @@ predict.deepspat_rPP <- function(object, newdata, uncAss = T, edm_emp = NULL,
       # use tape
       z_t_tf = tf$transpose(d$z_tf)
       compute_jaco <- function(zi_tf) {
-        # zi_tf = z_t_tf[[0]]
         zi_tf = tf$expand_dims(zi_tf, axis = 1L)
         with (tf$GradientTape(persistent=T) %as% tape1, {
           with (tf$GradientTape(persistent=T) %as% tape2, {
@@ -112,7 +108,6 @@ predict.deepspat_rPP <- function(object, newdata, uncAss = T, edm_emp = NULL,
     } else if (d$method == "WLS") {
       pairs_all = t(do.call("cbind", sapply(0:(nrow(d$s_tf)-2), function(k1){
         sapply((k1+1):(nrow(d$s_tf)-1), function(k2){ c(k1,k2) } ) } )))
-      # pairs = pairs_all[sample(1:nrow(pairs_all), round(nrow(pairs_all)*p1)),]
       pairs_tf =  tf$reshape(tf$constant(pairs_all, dtype = tf$int32),
                              c(nrow(pairs_all), ncol(pairs_all), 1L))
 
@@ -157,7 +152,6 @@ predict.deepspat_rPP <- function(object, newdata, uncAss = T, edm_emp = NULL,
       ctl_thre <- sort(edm_emp)[ctl_size+1]
       ctl <- tf$maximum(ctl_thre - edm_emp_tf, 0)
       weights_tf <- tf$maximum(2 - edm_emp_tf, 0)
-        # 1/edm_emp_tf
 
       ids_eff <- tf$squeeze(tf$where(ctl != 0))
       jaco_loss <- tf$gather(jaco_loss, ids_eff)
@@ -174,10 +168,8 @@ predict.deepspat_rPP <- function(object, newdata, uncAss = T, edm_emp = NULL,
 
       # G
       cat(">>> Precomputing global statistics...")
-      # Cov required
       exceed <- as.matrix(d$z_tf)
       cep.pairs_ele = t(do.call("cbind", sapply(1:(nrow(exceed)-1), function(i) {
-        # print(i/nrow(exceed))
         sapply((i+1):nrow(exceed), function(j) {
           exceeds_id1 = exceed[i,]>uprime
           exceeds_id2 = exceed[j,]>uprime
@@ -197,12 +189,10 @@ predict.deepspat_rPP <- function(object, newdata, uncAss = T, edm_emp = NULL,
       cep.pairs_boot_tf <- tf$constant(cep.pairs_boot, dtype)
       mean_row <- tf$reduce_mean(cep.pairs_boot_tf, axis = 1L, keepdims = TRUE)
       center_row <- cep.pairs_boot_tf - mean_row
-      # cov_sum_all <- tf$matmul(center_row, center_row, transpose_b = TRUE)/(B-1)
 
       scale_factor <- 1 #1 / (nrepli * (nrepli - 1))
       # ---------------------
       var_theta_tf <- tf$reduce_sum(tf$square(center_row), axis = 1L)/(B-1)
-      # var_theta_tf <- tf$linalg$diag_part(cov_sum_all)
       weighted_outer1 <- Xi*Xj*tf$reshape(var_theta_tf, c(-1L, 1L, 1L))*
         tf$reshape(weights_tf^2, c(-1L, 1L, 1L))
       G1_tf <- tf$reduce_sum(weighted_outer1, axis = 0L)*scale_factor
@@ -212,7 +202,6 @@ predict.deepspat_rPP <- function(object, newdata, uncAss = T, edm_emp = NULL,
       batch_n <- as.integer((npairs*(npairs - 1)/2) / batch_size) + 1L
       cond <- function(i_idx, G2) tf$less(i_idx, batch_n - 1L)
       body <- function(i_idx, G2) {
-        # print(i_idx)
         start_id <- batch_size*as.integer(i_idx) + 1
         end_id <- min(batch_size*as.integer(i_idx) + batch_size, npairs*(npairs - 1)/2)
         batch_indices <-  start_id:end_id

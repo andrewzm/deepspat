@@ -14,7 +14,7 @@
 #' }
 #' @export
 
-predict.deepspat_MSP <- function(object, newdata, uncAss = T, edm_emp = NULL) {
+summary.deepspat_MSP <- function(object, newdata, uncAss = T, edm_emp = NULL) {
 
   d <- object
   dtype <- d$dtype
@@ -52,7 +52,6 @@ predict.deepspat_MSP <- function(object, newdata, uncAss = T, edm_emp = NULL) {
   Sigma_psi <- NULL
   # ------------------------------
   if (uncAss) {
-    # jaco_loss = NULL
     cat("Evauating Jacobian... \n")
     deppar <- tf$Variable(c(fitted.phi, fitted.kappa), dtype=dtype)
     if (method %in% c("MPL", "MRPL")) {
@@ -126,7 +125,6 @@ predict.deepspat_MSP <- function(object, newdata, uncAss = T, edm_emp = NULL) {
       dec1_tf = EC_fn(deppar, pairs_tf)$dec1_tf
       dec2_tf = EC_fn(deppar, pairs_tf)$dec2_tf
       jaco_loss = tf$stack(list(dec1_tf, dec2_tf), axis = 1L)
-      # rm(dec1_tf, dec2_tf)
     }
     # ------------------------------
 
@@ -143,9 +141,6 @@ predict.deepspat_MSP <- function(object, newdata, uncAss = T, edm_emp = NULL) {
 
       outer_all <- ai * bj
 
-      # IiJj <- tf$meshgrid(tf$range(npairs), tf$range(npairs), indexing = "ij")
-      # Ii <- IiJj[[1]]
-      # Jj <- IiJj[[2]]
       range_n = tf$range(npairs, dtype=tf$int32)
       Ii <- tf$broadcast_to(tf$expand_dims(range_n, 1L), shape = c(npairs, npairs))
       Jj <- tf$broadcast_to(tf$expand_dims(range_n, 0L), shape = c(npairs, npairs))
@@ -153,18 +148,16 @@ predict.deepspat_MSP <- function(object, newdata, uncAss = T, edm_emp = NULL) {
       # Approximate J, K
       mask1d <- Ii == Jj
       outer_aa <- tf$boolean_mask(outer_all, mask1d)
-      # * / outer_aa$shape[2] for the evaluation of the expectation
       J_tf = tf$reduce_sum(outer_aa, axis = c(0L, 1L)) / nrepli
 
       mask2d <- Ii < Jj
       outer_ab <- tf$boolean_mask(outer_all, mask2d)
-      K1_tf = 2*tf$reduce_sum(outer_ab, axis = c(0L, 1L)) / nrepli
+      I_tf = 2*tf$reduce_sum(outer_ab, axis = c(0L, 1L)) / nrepli
 
       Jprime = as.matrix(J_tf); J = Jprime/p1
-      K1prime = as.matrix(K1_tf); K1 = K1prime/(p1^2)
+      Iprime = as.matrix(I_tf); I = Iprime/(p1^2)
       Jinv = solve(J)
-      # Sigma_psi = (Jinv%*%K%*%Jinv + Jinv)/dim(d$z_tf)[2]
-      Sigma_psi = (Jinv%*%K1%*%Jinv + Jinv/p1)/nrepli
+      Sigma_psi = (Jinv%*%I%*%Jinv + Jinv/p1)/nrepli
     } else if (d$method == "WLS") {
       edm_emp_tf <- tf$constant(edm_emp, dtype=dtype)
 
@@ -172,7 +165,6 @@ predict.deepspat_MSP <- function(object, newdata, uncAss = T, edm_emp = NULL) {
       ctl_thre <- sort(edm_emp)[ctl_size+1]
       ctl <- tf$maximum(ctl_thre - edm_emp_tf, 0)
       weights_tf <- tf$maximum(2 - edm_emp_tf, 0)
-        # 1/edm_emp_tf
 
       ids_eff <- tf$squeeze(tf$where(ctl != 0))
       jaco_loss <- tf$gather(jaco_loss, ids_eff)
@@ -189,9 +181,6 @@ predict.deepspat_MSP <- function(object, newdata, uncAss = T, edm_emp = NULL) {
 
       # G
       cat(">>> Precomputing global statistics...")
-      # Cov required
-      # ---
-      # all_indices <- 0:(npairs - 1)
       all_pairs <- tf$squeeze(tf$transpose(tf$gather(pairs_tf, ids_eff)), axis=0L)
       kall_tf <- all_pairs[[0]]
       lall_tf <- all_pairs[[1]]
@@ -204,8 +193,6 @@ predict.deepspat_MSP <- function(object, newdata, uncAss = T, edm_emp = NULL) {
       theta_all <- tf$clip_by_value(theta_all, clip_value_min = 1, clip_value_max = 2)
       thetaSq_all <- tf$expand_dims(theta_all^2, axis = 1L)  # (npairs, 1)
       thetaSq_uc_all <- thetaSq_all * ukl_centered
-      # Cijkl_all <- nrepli * thetaSq_uc_all
-      # ---
 
       scale_factor <- 1 / (nrepli * (nrepli - 1))
       # ---------------------
@@ -254,7 +241,6 @@ predict.deepspat_MSP <- function(object, newdata, uncAss = T, edm_emp = NULL) {
 
       i0 <- tf$constant(0L)
       G2_0 <- tf$zeros(shape = c(2L, 2L), dtype = dtype)
-      # t1 <- Sys.time()
       loop_result <- tf$while_loop(
         cond = cond,
         body = body,
@@ -262,7 +248,6 @@ predict.deepspat_MSP <- function(object, newdata, uncAss = T, edm_emp = NULL) {
         parallel_iterations = 1L,
         swap_memory = TRUE
       )
-      # t2 <- Sys.time()
 
       G2_tf <- loop_result[[2]]
       # ---------------------
