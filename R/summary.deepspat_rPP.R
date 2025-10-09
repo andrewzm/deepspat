@@ -5,7 +5,7 @@
 #' @param uncAss assess the uncertainty of dependence parameters or not
 #' @param edm_emp empirical estimates of extremal dependence meansure for weighted least square inference method
 #' @param uprime uprime for weighted least square inference method
-#'   Default is \code{"float32"}#' @param ... currently unused.
+#' @param ... currently unused.
 #' @return A list with the following components:
 #' \describe{
 #'   \item{srescaled}{A matrix of rescaled spatial coordinates produced by scaling the input locations.}
@@ -17,7 +17,7 @@
 #' @export
 
 summary.deepspat_rPP <- function(object, newdata, uncAss = T, edm_emp = NULL,
-                                 uprime = NULL) {
+                                 uprime = NULL, ...) {
 
   d <- object
   dtype <- d$dtype

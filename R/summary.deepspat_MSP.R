@@ -4,6 +4,7 @@
 #' @param newdata a data frame containing the prediction locations.
 #' @param uncAss assess the uncertainty of dependence parameters or not
 #' @param edm_emp empirical estimates of extremal dependence meansure for weighted least square inference method
+#' @param ... currently unused
 #' @return A list with the following components:
 #' \describe{
 #'   \item{srescaled}{A matrix of rescaled spatial coordinates produced by scaling the input locations.}
@@ -14,7 +15,7 @@
 #' }
 #' @export
 
-summary.deepspat_MSP <- function(object, newdata, uncAss = T, edm_emp = NULL) {
+summary.deepspat_MSP <- function(object, newdata, uncAss = T, edm_emp = NULL, ...) {
 
   d <- object
   dtype <- d$dtype
@@ -54,17 +55,17 @@ summary.deepspat_MSP <- function(object, newdata, uncAss = T, edm_emp = NULL) {
   if (uncAss) {
     cat("Evauating Jacobian... \n")
     deppar <- tf$Variable(c(fitted.phi, fitted.kappa), dtype=dtype)
-    if (method %in% c("MPL", "MRPL")) {
+    if (d$method %in% c("MPL", "MRPL")) {
       # using all pairs when estimating J, K is intractable
       # a fraction p1 of pairs is used instead
       p1 = d$p
-      if (method == "MRPL") {
+      if (d$method == "MRPL") {
         pairs_all = t(do.call("cbind", sapply(0:(nrow(d$s_tf)-2), function(k1){
           sapply((k1+1):(nrow(d$s_tf)-1), function(k2){ c(k1,k2) } ) } )))
         pairs = pairs_all[sample(1:nrow(pairs_all), round(nrow(pairs_all)*p1)),]
         pairs_tf =  tf$reshape(tf$constant(pairs, dtype = tf$int32),
                                c(nrow(pairs), ncol(pairs), 1L))
-      } else if (method == "MPL") { pairs_tf = d$pairs_tf }
+      } else if (d$method == "MPL") { pairs_tf = d$pairs_tf }
 
       Cost_fn1 = function(deppar, pairs_tf) {
         logphi_tf = tf$math$log(deppar[1])
