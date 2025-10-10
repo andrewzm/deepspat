@@ -1,17 +1,3 @@
-## Copyright 2022 Quan Vu
-##
-## Licensed under the Apache License, Version 2.0 (the "License");
-## you may not use this file except in compliance with the License.
-## You may obtain a copy of the License at
-##
-## http://www.apache.org/licenses/LICENSE-2.0
-##
-## Unless required by applicable law or agreed to in writing, software
-## distributed under the License is distributed on an "AS IS" BASIS,
-## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-## See the License for the specific language governing permissions and
-## limitations under the License.
-
 ## Log likelihood for the NNGP model
 ## using sparse tensor
 
@@ -172,11 +158,11 @@ logmarglik_nnGP_reml_sparse2 <- function(logsigma2y_tf, logl_tf, logsigma2_tf,
   #   K2 <- cov_exp_tf_nn(x1 = s_neighbor_tf, x2 = s_tf, sigma2f = sigma2_tf, alpha = 1/l_tf)
   #   K3 <- cov_exp_tf_nn(x1 = s_tf, sigma2f = sigma2_tf, alpha = 1/l_tf) + sigma2y_tf
   #
-  #   A <- - tf$matmul(tf$linalg$matrix_transpose(K2), tf$matrix_inverse(K1))
+  #   A <- - tf$matmul(tf$linalg$matrix_transpose(K2), tf$linalg$inv(K1))
   #   A <- A %>% tf$reshape(c(1L, as.integer(i-1)))
   #   A0 <- tf$concat(list(A0, A), axis=1L)
   #
-  #   D <- (K3 - tf$matmul(tf$matmul(tf$linalg$matrix_transpose(K2), tf$matrix_inverse(K1)), K2)) %>% tf$reshape(c(1L, 1L))
+  #   D <- (K3 - tf$matmul(tf$matmul(tf$linalg$matrix_transpose(K2), tf$linalg$inv(K1)), K2)) %>% tf$reshape(c(1L, 1L))
   #   D0 <- tf$concat(list(D0, D), axis=1L)
   #   idx0 <- tf$concat(list(idx0, idx1 - 1L), axis=0L)
   # }
@@ -194,13 +180,13 @@ logmarglik_nnGP_reml_sparse2 <- function(logsigma2y_tf, logl_tf, logsigma2_tf,
   K2 <- cov_exp_tf_nn(x1 = s_neighbor_tf, x2 = s_tf, sigma2f = sigma2_tf, alpha = 1/l_tf)
   K3 <- cov_exp_tf_nn(x1 = s_tf, sigma2f = sigma2_tf, alpha = 1/l_tf) + sigma2y_tf
 
-  A <- - tf$matmul(tf$linalg$matrix_transpose(K2), tf$matrix_inverse(K1)) %>%
+  A <- - tf$matmul(tf$linalg$matrix_transpose(K2), tf$linalg$inv(K1)) %>%
     tf$reshape(c(1L, n*m))
   A0 <- tf$concat(list(A0, A), axis=1L)
   A0 <- A0[1,]
   idx0 <- tf$concat(list(idx0, idx1 - 1L), axis=0L)
 
-  D <- (K3 - tf$matmul(tf$matmul(tf$linalg$matrix_transpose(K2), tf$matrix_inverse(K1)), K2)) %>% tf$reshape(c(1L, n))
+  D <- (K3 - tf$matmul(tf$matmul(tf$linalg$matrix_transpose(K2), tf$linalg$inv(K1)), K2)) %>% tf$reshape(c(1L, n))
   #D0 <- tf$concat(list(D0, D), axis=1L)
   #D0 <- D0 %>% tf$reshape(c(n, 1L))
   D0 <- D %>% tf$reshape(c(n, 1L))
@@ -221,7 +207,7 @@ logmarglik_nnGP_reml_sparse2 <- function(logsigma2y_tf, logl_tf, logsigma2_tf,
 
   Z_t_Sigmainv_X <- tf$matmul(sqrtDinv_I_minus_A_Z, sqrtDinv_I_minus_A_X, transpose_a = T)
 
-  X_t_Sigmainv_X_inv <- tf$matrix_inverse(X_t_Sigmainv_X)
+  X_t_Sigmainv_X_inv <- tf$linalg$inv(X_t_Sigmainv_X)
   Z_Big_Z <- tf$matmul(tf$matmul(Z_t_Sigmainv_X, X_t_Sigmainv_X_inv), Z_t_Sigmainv_X, transpose_b = T)
 
   Part1 <- -0.5 * tf$reduce_sum(tf$math$log(D0))
