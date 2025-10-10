@@ -260,8 +260,9 @@ summary.deepspat_MSP <- function(object, newdata, uncAss = T, edm_emp = NULL, ..
       Hinv = solve(H)
       Sigma_psi = (Hinv%*%G%*%Hinv)/nrepli
     }
+    cat("Done. \n")
   }
-  cat("Done. \n")
+  
 
   gc(full = TRUE, verbose = FALSE)
   tf$keras$backend$clear_session()
