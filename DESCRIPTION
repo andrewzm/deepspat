@@ -1,14 +1,14 @@
 Package: deepspat
 Type: Package
 Title: Deep Compositional Spatial Models
-Date: 2025-08-27
+Date: 2025-10-23
 Version: 0.3.0
-Authors@R: c(person(given = "Andrew", family = "Zammit-Mangion", role = c("aut", "cre"), 
-             email = "andrewzm@gmail.com"),
-             person(given = "Quan", family = "Vu", role = "aut"),
+Authors@R: c(person(given = "Andrew", family = "Zammit-Mangion", role = "aut"), 
+             person(given = "Quan", family = "Vu", role = c("aut", "cre"),
+             email = "quanvustats@gmail.com"),
              person(given = "Xuanjie", family = "Shao", role = "aut")
              )
-Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
+Maintainer: Quan Vu <quanvustats@gmail.com>
 Description: Deep compositional spatial models are standard spatial covariance
              models coupled with an injective warping function of the spatial 
              domain. The warping function is constructed through a composition 
