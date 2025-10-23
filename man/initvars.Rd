@@ -39,7 +39,7 @@ contains five values, one for the AWU, one for the RBF, one for the LFT (Mobius)
 
 \item{transeta_sd_init}{same as \code{transeta_mean_init} but for the variational standard deviations (SDSP only)}
 
-\item{transeta_sd_prior}{same as \code{transeta_mean_init} but for the preior standard deviations of the weights (SDSP only)}
+\item{transeta_sd_prior}{same as \code{transeta_mean_init} but for the prior standard deviations of the weights (SDSP only)}
 }
 \value{
 \code{initvars} returns a list with the initial values. Call \code{str(initvars())} to see the structure of this list.

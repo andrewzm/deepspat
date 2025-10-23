@@ -13,7 +13,7 @@
 
 \item{uncAss}{assess the uncertainty of dependence parameters or not}
 
-\item{edm_emp}{empirical estimates of extremal dependence meansure for weighted least square inference method}
+\item{edm_emp}{empirical estimates of extremal dependence measure for weighted least square inference method}
 
 \item{uprime}{uprime for weighted least square inference method}
 

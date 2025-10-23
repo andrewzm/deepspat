@@ -8,7 +8,7 @@
 #' contains five values, one for the AWU, one for the RBF, one for the LFT (Mobius), and two for the affine transformation
 #' @param transeta_mean_prior same as \code{transeta_mean_init} but for the prior mean of the weights (SDSP only)
 #' @param transeta_sd_init same as \code{transeta_mean_init} but for the variational standard deviations (SDSP only)
-#' @param transeta_sd_prior same as \code{transeta_mean_init} but for the preior standard deviations of the weights (SDSP only)
+#' @param transeta_sd_prior same as \code{transeta_mean_init} but for the prior standard deviations of the weights (SDSP only)
 #' @param variogram_logrange initial value for variogram_logrange
 #' @param variogram_logitdf initial value for variogram_logitdf
 #' @return \code{initvars} returns a list with the initial values. Call \code{str(initvars())} to see the structure of this list.
@@ -42,7 +42,7 @@ initvars <- function(sigma2y = 0.1,
                                               RBF1 = 2,
                                               RBF2 = 0.01,
                                               LFT = NA)) {
-  
+
   list(variogram_logrange = variogram_logrange,
        variogram_logitdf = variogram_logitdf,
        sigma2y = sigma2y,

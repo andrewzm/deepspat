@@ -59,7 +59,7 @@ Default is \code{"float32"}}
 
 \item{dWeight_fun}{A function representing the derivative of \code{weight_fun} (used in the GS method).}
 
-\item{pen_coef}{A penality parameter for weights of SR-RBF(2) to relieve overfitting.}
+\item{pen_coef}{A penalty parameter for weights of SR-RBF(2) to relieve overfitting.}
 
 \item{show}{Logical; if \code{TRUE} progress information is printed during training.}
 

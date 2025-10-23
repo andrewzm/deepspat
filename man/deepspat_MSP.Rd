@@ -51,7 +51,7 @@ Default is \code{"float32"}}
 \item{p}{For pairwise likelihood based methods, p is used to specify the size of pair subset for pairwise likelihood,
 or the probability parameter of Bernoulli r.v. for randomized pairwise likelihood.}
 
-\item{pen_coef}{A penality parameter for weights of SR-RBF(2) to relieve overfitting.}
+\item{pen_coef}{A penalty parameter for weights of SR-RBF(2) to relieve overfitting.}
 
 \item{show}{Logical; if \code{TRUE} progress information is printed during training.}
 

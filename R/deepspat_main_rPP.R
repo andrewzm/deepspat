@@ -20,7 +20,7 @@
 #' @param thre A numeric threshold used in the GS method.
 #' @param weight_fun A function used to weight pairwise differences in the GS method.
 #' @param dWeight_fun A function representing the derivative of \code{weight_fun} (used in the GS method).
-#' @param pen_coef A penality parameter for weights of SR-RBF(2) to relieve overfitting.
+#' @param pen_coef A penalty parameter for weights of SR-RBF(2) to relieve overfitting.
 #' @param show Logical; if \code{TRUE} progress information is printed during training.
 #' @param ... Currently unused.
 #' @return \code{deepspat_rPP} returns an object of class \code{deepspat_rPP} which is a list containing the following components:

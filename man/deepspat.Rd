@@ -74,11 +74,11 @@ d <- deepspat(f = z ~ s - 1, data = df, layers = layers, method = "ML", nsteps =
 }
 }
 \author{
-\strong{Maintainer}: Andrew Zammit-Mangion \email{andrewzm@gmail.com}
+\strong{Maintainer}: Quan Vu \email{quanvustats@gmail.com}
 
 Authors:
 \itemize{
-  \item Quan Vu
+  \item Andrew Zammit-Mangion
   \item Xuanjie Shao
 }
 

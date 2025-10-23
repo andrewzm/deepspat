@@ -3,7 +3,7 @@
 #' @param object a deepspat object obtained from fitting a deep compositional spatial model for extremes using max-stable processes.
 #' @param newdata a data frame containing the prediction locations.
 #' @param uncAss assess the uncertainty of dependence parameters or not
-#' @param edm_emp empirical estimates of extremal dependence meansure for weighted least square inference method
+#' @param edm_emp empirical estimates of extremal dependence measure for weighted least square inference method
 #' @param ... currently unused
 #' @return A list with the following components:
 #' \describe{
@@ -262,7 +262,7 @@ summary.deepspat_MSP <- function(object, newdata, uncAss = T, edm_emp = NULL, ..
     }
     cat("Done. \n")
   }
-  
+
 
   gc(full = TRUE, verbose = FALSE)
   tf$keras$backend$clear_session()

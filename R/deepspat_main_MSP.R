@@ -18,7 +18,7 @@
 #' @param edm_emp For the WLS method, a numeric vector or matrix providing an empirical extremal coefficients.
 #' @param p For pairwise likelihood based methods, p is used to specify the size of pair subset for pairwise likelihood,
 #'   or the probability parameter of Bernoulli r.v. for randomized pairwise likelihood.
-#' @param pen_coef A penality parameter for weights of SR-RBF(2) to relieve overfitting.
+#' @param pen_coef A penalty parameter for weights of SR-RBF(2) to relieve overfitting.
 #' @param show Logical; if \code{TRUE} progress information is printed during training.
 #' @param ... Currently unused.
 #' @return \code{deepspat_MSP} returns an object of class \code{deepspat_MSP} which is a list containing the following components:
