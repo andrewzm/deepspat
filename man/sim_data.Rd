@@ -29,7 +29,7 @@ sim_data(type = "step1D", ds = 0.001, n = 300L, sigma2y = NULL)
 Generates simulated data for use in experiments
 }
 \examples{
-\dontrun{
+\donttest{
 sim <- sim_data(type = "step1D", ds = 0.001)
 }
 }

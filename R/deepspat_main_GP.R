@@ -8,7 +8,7 @@
 #' @param family identifying the family of the model constructed
 #' @param par_init list of initial parameter values. Call the function \code{initvars()} to see the structure of the list
 #' @param learn_rates learning rates for the various quantities in the model. Call the function \code{init_learn_rates()} to see the structure of the list
-#' @param nsteps number of steps when doing gradient descent times two or three (depending on the family of model)  
+#' @param nsteps number of steps when doing gradient descent times two or three (depending on the family of model)
 #' @return \code{deepspat_GP} returns an object of class \code{deepspat_GP} with the following items
 #' \describe{
 #'  \item{"f"}{The formula used to construct the covariance model}
@@ -34,14 +34,15 @@
 #'  }
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' df <- data.frame(s1 = rnorm(100), s2 = rnorm(100), z = rnorm(100))
-#' layers <- c(AWU(r = 50, dim = 1L, grad = 200, lims = c(-0.5, 0.5)))
+#' layers <- c(AWU(r = 50L, dim = 1L, grad = 200, lims = c(-0.5, 0.5)),
+#'             AWU(r = 50L, dim = 2L, grad = 200, lims = c(-0.5, 0.5)))
 #' d <- deepspat_GP(f = z ~ s1 + s2 - 1,
 #'                  data = df, g = ~ 1,
 #'                  layers = layers, method = "REML",
 #'                  family = "matern_nonstat",
-#'                  nsteps = 100L)
+#'                  nsteps = 10L)
 #' }
 deepspat_GP <- function(f, data, g = ~ 1, layers = NULL,
                         method = c("REML"),
@@ -62,13 +63,13 @@ deepspat_GP <- function(f, data, g = ~ 1, layers = NULL,
   mmat <- model.matrix(f, data)
   X1 <- model.matrix(g, data)
   X <- tf$constant(X1, dtype="float32")
-  
+
   depvar <- get_depvars(f)
   z_tf <- tf$constant(as.matrix(data[[depvar]]), name = 'z', dtype = 'float32')
   ndata <- nrow(data)
-  
+
   s_tf <- tf$constant(mmat, name = "s", dtype = "float32")
-  
+
   ## Measurement-error variance
   logsigma2y_tf <- tf$Variable(log(par_init$sigma2y), name = "sigma2y", dtype = "float32")
   # sigma2y_tf <- tf$exp(logsigma2y_tf)
@@ -85,13 +86,13 @@ deepspat_GP <- function(f, data, g = ~ 1, layers = NULL,
   l <- par_init$l_top_layer
   logl_tf <- tf$Variable(matrix(log(l)), name = "l", dtype = "float32")
   # l_tf <- tf$exp(logl_tf)
-  
+
   ## Smoothness of the process
   normal <- tfp$distributions$Normal(loc=0, scale=1)
   nu_init <- par_init$nu
   cdf_nu_tf <- tf$Variable(qnorm(nu_init/3.5), name="nu", dtype="float32")
   # nu_tf <-  3.5*normal$cdf(cdf_nu_tf) #tf$constant(0.5, dtype="float32")
-  
+
   ###########################################################################################
   ###########################################################################################
   ###########################################################################################
@@ -102,48 +103,48 @@ deepspat_GP <- function(f, data, g = ~ 1, layers = NULL,
     if(method == "REML") {
       Cost_fn = function(){
         NMLL <- logmarglik_GP_matern_reml(logsigma2y_tf = logsigma2y_tf,
-                                          logl_tf = logl_tf, 
+                                          logl_tf = logl_tf,
                                           logsigma2_tf = logsigma2_tf,
                                           cdf_nu_tf = cdf_nu_tf,
                                           s_tf = s_tf,
                                           z_tf = z_tf,
                                           X = X,
                                           normal = normal,
-                                          ndata = ndata, 
+                                          ndata = ndata,
                                           family = family)
         NMLL$Cost
       }
     }
-    
+
     ## Optimisers for top layer
-    trains2y = function(loss_fn, var_list) 
+    trains2y = function(loss_fn, var_list)
       train_step(loss_fn, var_list, tf$optimizers$SGD(learn_rates$sigma2y))
-    traincovfun = function(loss_fn, var_list) 
+    traincovfun = function(loss_fn, var_list)
       train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$covfun))
-    trains2eta = function(loss_fn, var_list) 
+    trains2eta = function(loss_fn, var_list)
       train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$sigma2eta))
     # trains2y = (tf$optimizers$SGD(learn_rates$sigma2y))$minimize
     # traincovfun = (tf$optimizers$Adam(learn_rates$covfun))$minimize
     # trains2eta = (tf$optimizers$Adam(learn_rates$sigma2eta))$minimize
-    
+
     Objective <- rep(0, nsteps*2)
-    
+
     if(method == "REML") {
       negcostname <- "Restricted Likelihood"
     }
-    
-    cat("Measurement-error variance and cov. fn. parameters... \n")
+
+    message("Measurement-error variance and cov. fn. parameters...")
     for(i in 1:(nsteps*2)) {
       trains2y(Cost_fn, var_list = c(logsigma2y_tf))
-      if (family == "exp_stat") traincovfun(Cost_fn, var_list = c(logl_tf)) 
-      if (family == "matern_stat") traincovfun(Cost_fn, var_list = c(logl_tf, cdf_nu_tf)) 
+      if (family == "exp_stat") traincovfun(Cost_fn, var_list = c(logl_tf))
+      if (family == "matern_stat") traincovfun(Cost_fn, var_list = c(logl_tf, cdf_nu_tf))
       trains2eta(Cost_fn, var_list = list(logsigma2_tf))
       thisML <- -Cost_fn()
       if((i %% 10) == 0)
-        cat(paste("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
+        message(paste("Step ", i, " ... ", negcostname, ": ", thisML))
       Objective[i] <- as.numeric(thisML)
     }
-    
+
     transeta_tf <- NULL
     a_tf <- NULL
     eta_tf <- NULL
@@ -151,25 +152,25 @@ deepspat_GP <- function(f, data, g = ~ 1, layers = NULL,
     nlayers <- NULL
     swarped_tf <- s_tf
   }
-  
+
   ###########################################################################################
   ###########################################################################################
   ###########################################################################################
   ### matern_nonstat
   if (family %in% c("exp_nonstat", "matern_nonstat")){
-     
+
     stopifnot(is.list(layers))
     nlayers <- length(layers)
-    
+
     scalings <- list(scale_lims_tf(s_tf))
     s_tf <- scale_0_5_tf(s_tf, scalings[[1]]$min, scalings[[1]]$max)
-    
+
     if(method == "REML") {
       transeta_tf <- list()
 
       for(i in 1:nlayers) {
         layer_type <- layers[[i]]$name
-        
+
         if(layers[[i]]$fix_weights) {
           transeta_tf[[i]] <- tf$constant(matrix(rep(par_init$transeta_mean_init[[layer_type]], layers[[i]]$r)),
                                           name = paste0("eta", i), dtype = "float32")
@@ -179,20 +180,20 @@ deepspat_GP <- function(f, data, g = ~ 1, layers = NULL,
         }
       }
     }
-    
+
     ##############################################################
     ##Training
     if(method == "REML") {
       Cost_fn = function(){
         NMLL <- logmarglik_GP_matern_reml(logsigma2y_tf = logsigma2y_tf,
-                                          logl_tf = logl_tf, 
+                                          logl_tf = logl_tf,
                                           logsigma2_tf = logsigma2_tf,
                                           cdf_nu_tf = cdf_nu_tf,
                                           s_tf = s_tf,
                                           z_tf = z_tf,
                                           X = X,
                                           normal = normal,
-                                          ndata = ndata, 
+                                          ndata = ndata,
                                           family = family,
                                           layers = layers,
                                           transeta_tf = transeta_tf,
@@ -201,15 +202,15 @@ deepspat_GP <- function(f, data, g = ~ 1, layers = NULL,
         NMLL$Cost
       }
     }
-    
+
     ## Optimisers for top layer
     # trains2y = (tf$optimizers$SGD(learn_rates$sigma2y))$minimize
     # traincovfun = (tf$optimizers$Adam(learn_rates$covfun))$minimize
-    trains2y = function(loss_fn, var_list) 
+    trains2y = function(loss_fn, var_list)
       train_step(loss_fn, var_list, tf$optimizers$SGD(learn_rates$sigma2y))
-    traincovfun = function(loss_fn, var_list) 
+    traincovfun = function(loss_fn, var_list)
       train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$covfun))
-    
+
     ## Optimisers for eta (all hidden layers except LFT)
     nLFTlayers <- sum(sapply(layers, function(l) l$name) == "LFT")
     LFTidx <- which(sapply(layers, function(l) l$name) == "LFT")
@@ -218,63 +219,63 @@ deepspat_GP <- function(f, data, g = ~ 1, layers = NULL,
     if(opt_eta)
       if(method == "REML") {
         # traineta_mean = (tf$optimizers$Adam(learn_rates$eta_mean))$minimize
-        traineta_mean = function(loss_fn, var_list) 
+        traineta_mean = function(loss_fn, var_list)
           train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$eta_mean))
       }
-    
+
     a_tf = NULL
     if(nLFTlayers > 0) {
       a_tf = layers[[LFTidx]]$pars
       # trainLFTpars <- (tf$optimizers$Adam(learn_rates$LFTpars))$minimize
-      trainLFTpars = function(loss_fn, var_list) 
+      trainLFTpars = function(loss_fn, var_list)
         train_step(loss_fn, var_list, tf$optimizers$Adam(learn_rates$LFTpars))
     }
-    
+
     Objective <- rep(0, nsteps*3)
-    
+
     if(method == "REML") {
       negcostname <- "Restricted Likelihood"
     }
-    
+
 
     # --------------------------------------------------------------
-    cat("Learning weight parameters... \n")
+    message("Learning weight parameters...")
     for(i in 1:nsteps) {
       if(opt_eta) traineta_mean(Cost_fn, var_list = transeta_tf[notLFTidx])
       if(nLFTlayers > 0) trainLFTpars(Cost_fn, var_list = a_tf)
       thisML <- -Cost_fn()
       if((i %% 10) == 0)
-        cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
+        message(paste0("Step ", i, " ... ", negcostname, ": ", thisML))
       Objective[i] <- as.numeric(thisML)
     }
     # --------------------------------------------------------------
-    
-    
-    cat("Measurement-error variance and cov. fn. parameters... \n")
+
+
+    message("Measurement-error variance and cov. fn. parameters...")
     for(i in (nsteps + 1):(2 * nsteps)) {
       if(nLFTlayers > 0) trainLFTpars(Cost_fn, var_list = a_tf)
       trains2y(Cost_fn, var_list = c(logsigma2y_tf))
-      traincovfun(Cost_fn, var_list = c(logl_tf, logsigma2_tf)) 
-      if (family == "matern_nonstat") traincovfun(Cost_fn, var_list = c(cdf_nu_tf)) 
+      traincovfun(Cost_fn, var_list = c(logl_tf, logsigma2_tf))
+      if (family == "matern_nonstat") traincovfun(Cost_fn, var_list = c(cdf_nu_tf))
       thisML <- -Cost_fn()
       if((i %% 10) == 0)
-        cat(paste("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
+        message(paste("Step ", i, " ... ", negcostname, ": ", thisML))
       Objective[i] <- as.numeric(thisML)
     }
-    
-    cat("Updating everything... \n")
+
+    message("Updating everything...")
     for(i in (2*nsteps + 1):(3 * nsteps)) {
       if(opt_eta) traineta_mean(Cost_fn, var_list = transeta_tf[notLFTidx])
       if(nLFTlayers > 0) trainLFTpars(Cost_fn, var_list = a_tf)
       trains2y(Cost_fn, var_list = c(logsigma2y_tf))
-      traincovfun(Cost_fn, var_list = c(logl_tf, logsigma2_tf)) 
-      if (family == "matern_nonstat") traincovfun(Cost_fn, var_list = c(cdf_nu_tf)) 
+      traincovfun(Cost_fn, var_list = c(logl_tf, logsigma2_tf))
+      if (family == "matern_nonstat") traincovfun(Cost_fn, var_list = c(cdf_nu_tf))
       thisML <- -Cost_fn()
       if((i %% 10) == 0)
-        cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
+        message(paste0("Step ", i, " ... ", negcostname, ": ", thisML))
       Objective[i] <- as.numeric(thisML)
     }
-    
+
     # swarped_tf <- swarped_tf[[nlayers+1]]
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------------
@@ -285,47 +286,47 @@ deepspat_GP <- function(f, data, g = ~ 1, layers = NULL,
       if (layers[[i]]$name == "LFT") {
         a_inum_tf = layers[[i]]$trans(a_tf)
         swarped_tf[[i + 1]] <- layers[[i]]$f(swarped_tf[[i]], a_inum_tf)
-      } else { 
+      } else {
         eta_tf[[i]] <- layers[[i]]$trans(transeta_tf[[i]]) # ensure positivity for some variables
-        swarped_tf[[i + 1]] <- layers[[i]]$f(swarped_tf[[i]], eta_tf[[i]]) 
+        swarped_tf[[i + 1]] <- layers[[i]]$f(swarped_tf[[i]], eta_tf[[i]])
       }
       # swarped_tf[[i + 1]] <- layers[[i]]$f(swarped_tf[[i]], eta_tf[[i]]) # eta_tf[[i]] is useless when i = 12, i.e., LFTidx
       scalings[[i + 1]] <- scale_lims_tf(swarped_tf[[i + 1]])
       swarped_tf[[i + 1]] <- scale_0_5_tf(swarped_tf[[i + 1]], scalings[[i + 1]]$min, scalings[[i + 1]]$max)
     }
-    
+
     swarped_tf <- swarped_tf[[nlayers+1]]
-    
-    
+
+
   }
-  
-  
-  
+
+
+
   NMLL <- logmarglik_GP_matern_reml(logsigma2y_tf = logsigma2y_tf,
-                                    logl_tf = logl_tf, 
+                                    logl_tf = logl_tf,
                                     logsigma2_tf = logsigma2_tf,
                                     cdf_nu_tf = cdf_nu_tf,
                                     s_tf = s_tf,
                                     z_tf = z_tf,
                                     X = X,
                                     normal = normal,
-                                    ndata = ndata, 
+                                    ndata = ndata,
                                     family = family,
                                     transeta_tf = transeta_tf,
                                     a_tf = a_tf,
                                     scalings = scalings)
-  
+
   sigma2y_tf <- tf$exp(logsigma2y_tf)
   precy_tf <- tf$math$reciprocal(sigma2y_tf)
   # Qobs_tf <- tf$multiply(tf$math$reciprocal(sigma2y_tf), tf$eye(ndata))
   # Sobs_tf <- tf$multiply(sigma2y_tf, tf$eye(ndata))
-  
+
   sigma2_tf <- tf$exp(logsigma2_tf)
   l_tf <- tf$exp(logl_tf)
   nu_tf <-  3.5*normal$cdf(cdf_nu_tf)
   if (family %in% c("exp_stat", "exp_nonstat")) nu_tf <- tf$constant(0.5)
   # ...
-  
+
   deepspat.obj <- list(f = f,
                        g = g,
                        data = data,
@@ -337,7 +338,7 @@ deepspat_GP <- function(f, data, g = ~ 1, layers = NULL,
                        a_tf = a_tf,
                        precy_tf = precy_tf,
                        sigma2_tf = sigma2_tf,
-                       l_tf = l_tf, 
+                       l_tf = l_tf,
                        nu_tf = nu_tf,
                        scalings = scalings,
                        method = method,

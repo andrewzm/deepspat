@@ -36,7 +36,5 @@ It returns a list of length 1 containing an axial warping unit (AWU) and several
 functions that evaluate the AWU over inputs of different types. See Value for more details.
 }
 \examples{
-\dontrun{
 layer <- AWU(r = 50L, dim = 1L, grad = 200, lims = c(-0.5, 0.5))
-}
 }

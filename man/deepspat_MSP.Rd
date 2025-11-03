@@ -18,7 +18,7 @@ deepspat_MSP(
   edm_emp = NULL,
   p = c(0, 1),
   pen_coef = 0,
-  show = T,
+  show = TRUE,
   ...
 )
 }

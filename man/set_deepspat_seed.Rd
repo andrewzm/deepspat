@@ -9,6 +9,12 @@ set_deepspat_seed(seed = 1L)
 \arguments{
 \item{seed}{the seed}
 }
+\value{
+No return value, called for side effects.
+}
 \description{
 Set TensorFlow seed in deepspat package
+}
+\examples{
+set_deepspat_seed(seed = 1L)
 }

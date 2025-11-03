@@ -21,7 +21,7 @@ deepspat_rPP(
   weight_fun = NULL,
   dWeight_fun = NULL,
   pen_coef = 0,
-  show = T,
+  show = TRUE,
   ...
 )
 }

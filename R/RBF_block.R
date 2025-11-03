@@ -17,11 +17,10 @@
 #' }
 #' @export
 #' @examples
-#' \dontrun{
 #' layer <- RBF_block(res = 1L)
-#' }
+
 RBF_block <- function(res = 1L, lims = c(-0.5, 0.5), dtype = "float32") {
-  
+
   ## Parameters appearing in sigmoid (grad, loc)
   r <- (3^res)^2
   cx1d <- seq(lims[1], lims[2], length.out = sqrt(r))
@@ -29,10 +28,10 @@ RBF_block <- function(res = 1L, lims = c(-0.5, 0.5), dtype = "float32") {
   a <- 2*(3^res - 1)^2
   theta <- cbind(cxgrid, a)
   theta_tf <- tf$constant(theta, dtype = dtype)
-  
+
   RBF_list <- list()
-  
-  
+
+
   trans <- function(transeta) {
     tf$exp(-transeta) %>%
       tf$add(tf$constant(1, dtype = dtype)) %>%
@@ -40,30 +39,30 @@ RBF_block <- function(res = 1L, lims = c(-0.5, 0.5), dtype = "float32") {
       tf$multiply(tf$constant(1 + exp(3/2)/2, dtype = dtype)) %>%
       tf$add(tf$constant(-1, dtype = dtype))
   }
-  
+
   for(count in 1:r) {
     ff <- function(count) {
       j <- count
-      
+
       f = function(s_tf, eta_tf) {
         PHI_tf <- RBF_tf(s_tf, theta_tf[j, , drop = FALSE])
         swarped <-  tf$multiply(PHI_tf, eta_tf)
         sout_tf <- tf$add(swarped, s_tf)
       }
-      
+
       fMC = function(s_tf, eta_tf) {
         PHI_tf <- RBF_tf(s_tf, theta_tf[j, , drop = FALSE])
         swarped <-  tf$multiply(PHI_tf, eta_tf)
         sout_tf <- tf$add(swarped, s_tf)
       }
-      
+
       fR = function(s, eta) {
         PHI <- RBF(s, theta[j, , drop = FALSE])
         swarped <-  PHI*eta
         sout <- swarped + s
       }
       list(f = f, fMC = fMC, fR = fR)
-      
+
     }
     RBF_list[[count]] <- list(f = ff(count)$f,
                               fMC = ff(count)$fMC,

@@ -1,75 +1,72 @@
-## Load TensorFlow and add the cholesky functions
+.deepspat_env <- new.env(parent = emptyenv())
+
+get_tf <- function() {
+  if (!exists(".tf", envir = .deepspat_env)) {
+    tf <- reticulate::import("tensorflow", delay_load = TRUE)
+
+    tf$cholesky_lower <- tf$linalg$cholesky
+    tf$cholesky_upper <- function(x) tf$linalg$matrix_transpose(tf$linalg$cholesky(x))
+    tf$matrix_inverse <- tf$linalg$inv
+
+    assign(".tf", tf, envir = .deepspat_env)
+  }
+  get(".tf", envir = .deepspat_env)
+}
+
+get_bessel <- function() {
+  if (!exists(".bessel", envir = .deepspat_env)) {
+    bessel_module <- reticulate::import_from_path(
+      "besselK_tfv2",
+      system.file("python", package = "deepspat")
+    )
+    assign(".bessel", bessel_module, envir = .deepspat_env)
+  }
+  get(".bessel", envir = .deepspat_env)
+}
+
+
 .onLoad <- function(libname, pkgname) {
+  if (reticulate::py_available(initialize = FALSE)) {
+    get_tf()
+    get_bessel()
+
+  }
+}
+
+
+get_besselK_R <- function() {
+
+  if (exists("besselK_R", envir = .deepspat_env)) {
+    return(get("besselK_R", envir = .deepspat_env))
+  }
 
   if (reticulate::py_available(initialize = FALSE)) {
-
-    .deepspat_env <- new.env(parent = emptyenv())
-
-    #tf <<- reticulate::import("tensorflow", delay_load = TRUE)
-
-    #tf$cholesky_lower <- tf$linalg$cholesky
-    #tf$cholesky_upper <- function(x) tf$linalg$matrix_transpose(tf$linalg$cholesky(x))
-    #tf$matrix_inverse <- tf$linalg$inv
-
-    get_tf <- function() {
-      if (!exists(".tf", envir = .deepspat_env)) {
-        tf <- reticulate::import("tensorflow", delay_load = TRUE)
-      }
-      tf$cholesky_lower <<- tf$linalg$cholesky
-      tf$cholesky_upper <<- function(x) tf$linalg$matrix_transpose(tf$linalg$cholesky(x))
-      tf$matrix_inverse <<- tf$linalg$inv
-      assign(".tf", tf, envir = .deepspat_env)
-      get(".tf", envir = .deepspat_env)
-    }
-
-
-    #bessel <<- reticulate::import_from_path("besselK_tfv2", system.file("python", package = "deepspat"))
-    #besselK_py <<- bessel$besselK_py
-    #besselK_derivative_x_py <<- bessel$besselK_derivative_x_py
-    #besselK_derivative_nu_py <<- bessel$besselK_derivative_nu_py
-
-    get_bessel <- function() {
-      if (!exists(".bessel", envir = .deepspat_env)) {
-        bessel <<- reticulate::import_from_path(
-          "besselK_tfv2",
-          system.file("python", package = "deepspat")
-        )
-        assign(".bessel", bessel, envir = .deepspat_env)
-      }
-      get(".bessel", envir = .deepspat_env)
-    }
-
     tf <- get_tf()
     bessel <- get_bessel()
 
+    besselK_R <- tf$custom_gradient(f = function(x, nu, dtype = tf$float32) {
+      bK = tf$constant(
+        bessel$besselK_py(x, nu),
+        shape = c(length(x)),
+        dtype = dtype
+      )
+      grad = function(one) {
+        dx = bessel$besselK_derivative_x_py(x, nu)
+        dnu = bessel$besselK_derivative_nu_py(x, nu)
+        list(one * dx, one * dnu)
+      }
+      list(bK, grad)
+    })
+
+    assign("besselK_R", besselK_R, envir = .deepspat_env)
+    return(besselK_R)
 
   }
-
 }
 
-
-load_deepspat_env <- function(to = .GlobalEnv) {
-  if (exists(".deepspat_env", envir = globalenv())) {
-    list2env(as.list(get(".deepspat_env", envir = globalenv())), envir = to)
-    message("Loaded .deepspat_env into ", environmentName(to))
-  }
+besselK_R <- function(x, nu) {
+  bessel_func <- get_besselK_R()
+  bessel_func(x, nu)
 }
-load_deepspat_env()
 
-besselK_R <- NULL
-if (reticulate::py_available(initialize = FALSE)) {
-  besselK_R = tf$custom_gradient(f = function(x, nu, dtype = tf$float32) {
-    bK = tf$constant(bessel$besselK_py(x, nu),#besselK(as.numeric(x), as.numeric(nu)),
-                     shape = c(length(x)),
-                     dtype = dtype)
-    grad = function(one) {
-      dx = bessel$besselK_derivative_x_py(x, nu)
-      dnu = bessel$besselK_derivative_nu_py(x, nu)
-      list(one*dx, one*dnu)
-    }
-    list(bK, grad)
-  })
-}
-globalVariables("besselK_R")
-
-globalVariables(c("tape", "tape1"))
+globalVariables(c("besselK_R", "tape", "tape1"))

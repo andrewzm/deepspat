@@ -15,7 +15,7 @@
 #' }
 #' @export
 
-summary.deepspat_MSP <- function(object, newdata, uncAss = T, edm_emp = NULL, ...) {
+summary.deepspat_MSP <- function(object, newdata, uncAss = TRUE, edm_emp = NULL, ...) {
 
   d <- object
   dtype <- d$dtype

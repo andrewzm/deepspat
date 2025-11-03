@@ -61,7 +61,7 @@ deepspat_MSP <- function(f, data,
                          edm_emp = NULL,        # for WLS
                          p = c(0,1),            # for PL (sampled subset) and RPL
                          pen_coef = 0,
-                         show = T,
+                         show = TRUE,
                          ...) {
   ptm1 = Sys.time()
 
@@ -179,12 +179,12 @@ deepspat_MSP <- function(f, data,
       negcostname <- "LeastSquares"
     }
 
-    cat("Learning weight parameters... \n")
+    message("Learning weight parameters...")
     for(i in 1:(2*nsteps)) { # nsteps
       trainvario(Cost_fn, var_list = c(logphi_tf, logitkappa_tf))
       thisML <- Cost_fn()
       if(show & (i %% 10) == 0) {
-        cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML,"\n"))
+        message(paste0("Step ", i, " ... ", negcostname, ": ", thisML))
       }
       Objective[i] <- as.numeric(thisML)
     }
@@ -323,7 +323,7 @@ deepspat_MSP <- function(f, data,
       negcostname <- "LeastSquares"
     }
 
-    cat("Learning weight parameters and dependence parameters in turn... \n")
+    message("Learning weight parameters and dependence parameters in turn...")
     for(i in 1:(nsteps_pre*pre_count)) { # nsteps
       if (pre_bool[1] & i <= nsteps_pre*1*pre_bool[1]) {
         traineta_mean(Cost_fn, var_list = transeta_tf[c(AWUidx, RBF1idx)]) }
@@ -337,7 +337,7 @@ deepspat_MSP <- function(f, data,
 
       thisML <- Cost_fn()
       if(show & (i %% 10) == 0) {
-        cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML,"\n"))
+        message(paste0("Step ", i, " ... ", negcostname, ": ", thisML))
         # cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML,
         #            "; phi: ", round(exp(logphi_tf), 3),
         #            "; kappa: ", round(2*tf$sigmoid(logitkappa_tf),"\n"), 3))
@@ -346,7 +346,7 @@ deepspat_MSP <- function(f, data,
       Objective[i] <- as.numeric(thisML)
     }
 
-    cat("Updating everything... \n")
+    message("Updating everything...")
     for(i in 1:nsteps+nsteps_pre*pre_count) { # (2*nsteps + 1):(3 * nsteps)
       if (nRBF1layers > 0) { traineta_mean(Cost_fn, var_list = transeta_tf[c(AWUidx, RBF1idx)]) }
       if (nRBF2layers > 0) { traineta_mean2(Cost_fn, var_list = transeta_tf[RBF2idx]) }
@@ -355,7 +355,7 @@ deepspat_MSP <- function(f, data,
 
       thisML <- Cost_fn()
       if(show & (i %% 10) == 0) {
-        cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML,"\n"))
+        message(paste0("Step ", i, " ... ", negcostname, ": ", thisML))
       }
       Objective[i] <- as.numeric(thisML)
     }

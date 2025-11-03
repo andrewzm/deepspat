@@ -15,11 +15,10 @@
 #' }
 #' @export
 #' @examples
-#' \dontrun{
 #' layer <- LFT()
-#' }
+
 LFT <- function(a = NULL, dtype = "float32") {
-  
+
   if(is.null(a)) {
     a1 <- a4 <- 1 + 0i
     a2 <- a3 <- 0 + 0i
@@ -31,17 +30,17 @@ LFT <- function(a = NULL, dtype = "float32") {
     a3 <- a[3]
     a4 <- a[4]
   }
-  
+
   a1Re_tf <- tf$Variable(1, name = "a1Re", dtype = dtype)
   a2Re_tf <- tf$Variable(0, name = "a2Re", dtype = dtype)
   a3Re_tf <- tf$Variable(0, name = "a3Re", dtype = dtype)
   a4Re_tf <- tf$Variable(1, name = "a4Re", dtype = dtype)
-  
+
   a1Im_tf <- tf$Variable(0, name = "a1Im", dtype = dtype)
   a2Im_tf <- tf$Variable(0, name = "a2Im", dtype = dtype)
   a3Im_tf <- tf$Variable(0, name = "a3Im", dtype = dtype)
   a4Im_tf <- tf$Variable(0, name = "a4Im", dtype = dtype)
-  
+
   trans <- function(pars){
     a1Re_tf = pars[[1]]; a2Re_tf = pars[[2]]; a3Re_tf = pars[[3]]; a4Re_tf = pars[[4]]
     a1Im_tf = pars[[5]]; a2Im_tf = pars[[6]]; a3Im_tf = pars[[7]]; a4Im_tf = pars[[8]]
@@ -62,7 +61,7 @@ LFT <- function(a = NULL, dtype = "float32") {
     P <- tf$math$divide(P1, P2) %>% tf$expand_dims(1L)
     sout_tf <- tf$concat(list(tf$math$real(P), tf$math$imag(P)), axis = 1L)
   }
-  
+
   fMC = function(s_tf, a_tf) {
     # a1_tf = a_tf[1,1]; a2_tf = a_tf[2,1]
     # a3_tf = a_tf[3,1]; a4_tf = a_tf[4,1]
@@ -73,7 +72,7 @@ LFT <- function(a = NULL, dtype = "float32") {
     P <- tf$math$divide(P1, P2) %>% tf$expand_dims(2L)
     sout_tf <- tf$concat(list(tf$math$real(P), tf$math$imag(P)), axis = 2L)
   }
-  
+
   fR = function(s, a) {
     # a1 = a[1,1]; a2 = a[2,1]; a3 = a[3,1]; a4 = a[4,1]
     a1 = a[[1]]; a2 = a[[2]]; a3 = a[[3]]; a4 = a[[4]]
@@ -81,7 +80,7 @@ LFT <- function(a = NULL, dtype = "float32") {
     fz <- (a1*z + a2) / (a3*z + a4)
     cbind(Re(fz), Im(fz))
   }
-  
+
   list(list(f = f,
             fMC = fMC,
             fR = fR,

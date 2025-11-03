@@ -20,9 +20,7 @@
 #' }
 #' @export
 #' @examples
-#' \dontrun{
 #' layer <- AWU(r = 50L, dim = 1L, grad = 200, lims = c(-0.5, 0.5))
-#' }
 AWU <- function(r = 50L, dim = 1L, grad = 200, lims = c(-0.5, 0.5), dtype = "float32") {
 
   ## Parameters appearing in sigmoid (grad, loc)

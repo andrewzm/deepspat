@@ -10,15 +10,7 @@
 #'  \item{"allsims"}{Combined simulations from the Gaussian mixtures (SDSP only)}
 #'  }
 #' @export
-#' @examples
-#' \dontrun{
-#' df <- data.frame(s = rnorm(100), z = rnorm(100))
-#' dfnew <- data.frame(s = rnorm(20))
-#' layers <- c(AWU(r = 50L, dim = 1L, grad = 200, lims = c(-0.5, 0.5)),
-#'             bisquares1D(r = 50))
-#'   d <- deepspat(f = z ~ s - 1, data = df, layers = layers, method = "ML", nsteps = 100L)
-#'   pred <- predict(d, dfnew)
-#' }
+
 predict.deepspat <- function(object, newdata, nsims = 100L, ...) {
 
   d <- object
@@ -41,7 +33,7 @@ predict.deepspat <- function(object, newdata, nsims = 100L, ...) {
         }
       }
     PHI_pred <- d$layers[[d$nlayers]]$f(h_tf[[d$nlayers]])
-    Spost_tf <- tf$matrix_inverse(d$Qpost_tf)
+    Spost_tf <- tf$linalg$inv(d$Qpost_tf)
     pred_tf <- tf$matmul(PHI_pred, d$mupost_tf) + d$data_scale_mean_tf
     pred_se_tf <- tf$matmul(PHI_pred, Spost_tf) %>%
       tf$matmul(tf$transpose(PHI_pred)) %>%
@@ -60,7 +52,7 @@ predict.deepspat <- function(object, newdata, nsims = 100L, ...) {
                      smax_tf = d$scalings[[i + 1]]$max)
     }
     PHI_pred <- d$layers[[d$nlayers]]$f(h_tf_all[[d$nlayers]])
-    #Spost_tf <-  tf$matrix_inverse(d$Qpost_tf)
+    #Spost_tf <-  tf$linalg$inv(d$Qpost_tf)
     pred_tf <- tf$matmul(PHI_pred, d$mupost_tf) + d$data_scale_mean_tf
     #Lpost_tf <-  tf$cholesky_lower(Spost_tf)
     #sims <- tf$matmul(Lpost_tf, tf$random_normal(c(d$MC, d$layers[[d$nlayers]]$r, nsims)))

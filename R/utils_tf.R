@@ -27,7 +27,7 @@ atBa_tf <- function(a, B) {
 }
 
 ABinvAt_tf <- function(A, cholB) {
-  AcholB <- tf$matmul(A, tf$matrix_inverse(cholB))
+  AcholB <- tf$matmul(A, tf$linalg$inv(cholB))
   tf$matmul(AcholB, tf$transpose(AcholB))
 }
 
@@ -44,7 +44,7 @@ entropy_tf <- function(s) {
 }
 
 chol2inv_tf <- function(R) {
-  Rinv <- tf$matrix_inverse(R)
+  Rinv <- tf$linalg$inv(R)
   tf$matmul(Rinv, tf$transpose(Rinv))
 }
 
@@ -62,14 +62,14 @@ pinvsolve_tf <- function(A, b, reltol = 1e-6) {
   s <- A_SVD[[1]]
   u <- A_SVD[[2]]
   v <- A_SVD[[3]]
-  
+
   # Invert s, clear entries lower than reltol*s[0].
   atol = tf$multiply(tf$reduce_max(s), reltol)
   s_mask = tf$boolean_mask(s, tf$greater_equal(s, atol))
   s_reciprocal <- tf$math$reciprocal(s_mask)
   s_inv = tf$diag(tf$concat(list(s_reciprocal,
                                  tf$zeros(tf$size(s) - tf$size(s_mask))), 0L))
-  
+
   # Compute v * s_inv * u_t * b from the left to avoid forming large intermediate matrices.
   tf$matmul(v, tf$matmul(s_inv, tf$matmul(u, b, transpose_a = TRUE)))
 }
@@ -77,7 +77,7 @@ pinvsolve_tf <- function(A, b, reltol = 1e-6) {
 scale_lims_tf <- function(s_tf) {
   smin_tf <- tf$reduce_min(s_tf, axis = -2L, keepdims = TRUE)
   smax_tf <- tf$reduce_max(s_tf, axis = -2L, keepdims = TRUE)
-  
+
   list(min = smin_tf,
        max = smax_tf)
 }
@@ -92,21 +92,24 @@ KL_tf <- function(mu1, S1, mu2, S2) {
   R2 <- tf$cholesky_upper(S2)
   Q2 <- chol2inv_tf(R2)
   k <- tf$shape(mu1)[1] %>% tf$to_float()
-  
+
   Part1 <- tf$matmul(Q2, S1) %>% tf$trace()
   Part2 <- (tf$transpose(mu2 - mu1) %>%
               tf$matmul(Q2) %>%
               tf$matmul(mu2 - mu1))[1,1]
   Part3 <- -k
   Part4 <- logdet_tf(R2) - logdet_tf(R1)
-  
+
   tf$constant(0.5, dtype = "float32") * (Part1 + Part2 + Part3 + Part4)
 }
 
 #' @title Set TensorFlow seed
 #' @description Set TensorFlow seed in deepspat package
 #' @param seed the seed
+#' @return No return value, called for side effects.
 #' @export
+#' @examples
+#' set_deepspat_seed(seed = 1L)
 
 set_deepspat_seed <- function(seed = 1L) {
   # tf$set_random_seed(seed)

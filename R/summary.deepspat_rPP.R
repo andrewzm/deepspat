@@ -16,7 +16,7 @@
 #' }
 #' @export
 
-summary.deepspat_rPP <- function(object, newdata, uncAss = T, edm_emp = NULL,
+summary.deepspat_rPP <- function(object, newdata, uncAss = TRUE, edm_emp = NULL,
                                  uprime = NULL, ...) {
 
   d <- object

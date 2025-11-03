@@ -4,7 +4,7 @@
 \alias{summary.deepspat_rPP}
 \title{Deep compositional spatial model for extremes}
 \usage{
-\method{summary}{deepspat_rPP}(object, newdata, uncAss = T, edm_emp = NULL, uprime = NULL, ...)
+\method{summary}{deepspat_rPP}(object, newdata, uncAss = TRUE, edm_emp = NULL, uprime = NULL, ...)
 }
 \arguments{
 \item{object}{a deepspat object obtained from fitting a deep compositional spatial model for extremes using r-Pareto processes.}

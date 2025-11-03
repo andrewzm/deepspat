@@ -178,7 +178,7 @@ deepspat_nn_ST_GP <- function(f, data, g = ~ 1,
       negcostname <- "Restricted Likelihood"
     }
 
-    cat("Measurement-error variance and cov. fn. parameters... \n")
+    message("Measurement-error variance and cov. fn. parameters...")
     for(i in 1:(2 * nsteps)) {
       if (family == "exp_stat_asym") trainv(Cost_fn, var_list = c(v_tf))
 
@@ -190,7 +190,7 @@ deepspat_nn_ST_GP <- function(f, data, g = ~ 1,
 
       trains2eta(Cost_fn, var_list = c(logsigma2_tf))
       thisML <- -Cost_fn()
-      if((i %% 10) == 0) cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
+      if((i %% 10) == 0) message(paste0("Step ", i, " ... ", negcostname, ": ", thisML))
       Objective[i] <- as.numeric(thisML)
     }
 
@@ -391,17 +391,17 @@ deepspat_nn_ST_GP <- function(f, data, g = ~ 1,
       negcostname <- "Restricted Likelihood"
     }
 
-    cat("Learning weight parameters... \n")
+    message("Learning weight parameters...")
     for(i in 1:nsteps) {
       if(opt_eta) traineta_mean(Cost_fn, var_list = c(transeta_tf[notLFTidx], transeta_t_tf))
       if(nLFTlayers > 0) trainLFTpars(Cost_fn, var_list = a_tf)
       if (family == "exp_nonstat_asym") trainv(Cost_fn, var_list = c(v_tf))
       thisML <- -Cost_fn()
-      if((i %% 10) == 0) cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
+      if((i %% 10) == 0) message(paste0("Step ", i, " ... ", negcostname, ": ", thisML))
       Objective[i] <- as.numeric(thisML)
     }
 
-    cat("Measurement-error variance and cov. fn. parameters... \n")
+    message("Measurement-error variance and cov. fn. parameters...")
     for(i in (nsteps + 1):(2 * nsteps)) {
       if(nLFTlayers > 0) trainLFTpars(Cost_fn, var_list = a_tf)
       trains2y(Cost_fn, var_list = c(logsigma2y_tf))
@@ -410,11 +410,11 @@ deepspat_nn_ST_GP <- function(f, data, g = ~ 1,
       } else { traincovfun(Cost_fn, var_list = c(logl_tf)) }
       trains2eta(Cost_fn, var_list = c(logsigma2_tf))
       thisML <- -Cost_fn()
-      if((i %% 10) == 0) cat(paste("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
+      if((i %% 10) == 0) message(paste("Step ", i, " ... ", negcostname, ": ", thisML))
       Objective[i] <- as.numeric(thisML)
     }
 
-    cat("Updating everything... \n")
+    message("Updating everything...")
     for(i in (2*nsteps + 1):(3 * nsteps)) {
       if(opt_eta) traineta_mean(Cost_fn, var_list = c(transeta_tf[notLFTidx], transeta_t_tf))
       if(nLFTlayers > 0) trainLFTpars(Cost_fn, var_list = a_tf)
@@ -425,7 +425,7 @@ deepspat_nn_ST_GP <- function(f, data, g = ~ 1,
       } else { traincovfun(Cost_fn, var_list = c(logl_tf)) }
       trains2eta(Cost_fn, var_list = c(logsigma2_tf))
       thisML <- -Cost_fn()
-      if((i %% 10) == 0) cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
+      if((i %% 10) == 0) message(paste0("Step ", i, " ... ", negcostname, ": ", thisML))
       Objective[i] <- as.numeric(thisML)
     }
 

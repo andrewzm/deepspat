@@ -32,10 +32,12 @@
 #' @examples
 #' \dontrun{
 #' df <- data.frame(s = rnorm(100), z = rnorm(100))
-#' layers <- c(AWU(r = 50, dim = 1L, grad = 200, lims = c(-0.5, 0.5)),
+#' dfnew <- data.frame(s = rnorm(20))
+#' layers <- c(AWU(r = 50L, dim = 1L, grad = 200, lims = c(-0.5, 0.5)),
 #'             bisquares1D(r = 50))
-#' d <- deepspat(f = z ~ s - 1, data = df, layers = layers, method = "ML", nsteps = 100L)
+#' d <- deepspat(f = z ~ s - 1, data = df, layers = layers, method = "ML", nsteps = 10L)
 #' }
+
 deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
                      par_init = initvars(),
                      learn_rates = init_learn_rates(),
@@ -168,7 +170,7 @@ deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
 
   ## ML: trains2y, traincovfun, traineta_mean, trainLFTpars
   # 400 ite for traineta_mean, trainLFTpars
-  cat("Learning weight parameters... \n")
+  message("Learning weight parameters...")
   for(i in 1:nsteps) {
     if(opt_eta & method == "ML") {traineta_mean(Cost_fn, var_list = transeta_tf[notLFTidx])}
     if(nLFTlayers > 0) { trainLFTpars(Cost_fn, var_list = a_tf) }
@@ -181,13 +183,13 @@ deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
       # cat(paste0("Step ", i, " ... RBF: ", paste(RBFweights, collapse = ","), "\n"))
       # cat(paste0("Step ", i, "... LFT: ",
       #            paste(round(sapply(1:8, function(j) as.numeric(a_tf[[j]])), 2), collapse = ","), "\n"))
-      cat(paste0("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
+      message(paste0("Step ", i, " ... ", negcostname, ": ", thisML))
     }
     Objective[i] <- as.numeric(thisML)
   }
 
   # 400 ite for trainLFTpars, trains2y, traincovfun
-  cat("Measurement-error variance and cov. fn. parameters... \n")
+  message("Measurement-error variance and cov. fn. parameters...")
   for(i in (nsteps + 1):(2 * nsteps)) {
     if(nLFTlayers > 0) { trainLFTpars(Cost_fn, var_list = a_tf) }
     trains2y(Cost_fn, var_list = c(logsigma2y_tf))
@@ -196,12 +198,12 @@ deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
     if((i %% 10) == 0) {
       # cat(paste0("Step ", i, "... LFT: ",
       #            paste(round(sapply(1:8, function(j) as.numeric(a_tf[[j]])), 2), collapse = ","), "\n"))
-      cat(paste("Step ", i, " ... ", negcostname, ": ", thisML, "\n")) }
+      message(paste("Step ", i, " ... ", negcostname, ": ", thisML)) }
     Objective[i] <- as.numeric(thisML)
   }
 
   # 400 ite for traineta_mean, trainLFTpars, trains2y, traincovfun
-  cat("Updating everything... \n")
+  message("Updating everything...")
   for(i in (2*nsteps + 1):(3 * nsteps)) {
     if(opt_eta & method == "ML") {traineta_mean(Cost_fn, var_list = transeta_tf[notLFTidx])}
     if(nLFTlayers > 0) { trainLFTpars(Cost_fn, var_list = a_tf) }
@@ -216,7 +218,7 @@ deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
       # cat(paste0("Step ", i, " ... RBF: ", paste(RBFweights, collapse = ","), "\n"))
       # cat(paste0("Step ", i, "... LFT: ",
       #            paste(round(sapply(1:8, function(j) as.numeric(a_tf[[j]])), 2), collapse = ","), "\n"))
-      cat(paste("Step ", i, " ... ", negcostname, ": ", thisML, "\n"))
+      message(paste("Step ", i, " ... ", negcostname, ": ", thisML))
     }
     Objective[i] <- as.numeric(thisML)
   }
@@ -231,9 +233,9 @@ deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
     } else {
       eta_tf[[i]] <- layers[[i]]$trans(transeta_tf[[i]]) # ensure positivity for some variables
       swarped_tf[[i + 1]] <- layers[[i]]$f(swarped_tf[[i]], eta_tf[[i]])
-      }
-  scalings[[i + 1]] <- scale_lims_tf(swarped_tf[[i + 1]])
-  swarped_tf[[i + 1]] <- scale_0_5_tf(swarped_tf[[i + 1]], scalings[[i + 1]]$min, scalings[[i + 1]]$max)
+    }
+    scalings[[i + 1]] <- scale_lims_tf(swarped_tf[[i + 1]])
+    swarped_tf[[i + 1]] <- scale_0_5_tf(swarped_tf[[i + 1]], scalings[[i + 1]]$min, scalings[[i + 1]]$max)
   }
 
   sigma2y_tf <- tf$exp(logsigma2y_tf)
