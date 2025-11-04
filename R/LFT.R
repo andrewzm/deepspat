@@ -15,7 +15,11 @@
 #' }
 #' @export
 #' @examples
+#' \donttest{
+#' if (reticulate::py_module_available("tensorflow")) {
 #' layer <- LFT()
+#'  }
+#' }
 
 LFT <- function(a = NULL, dtype = "float32") {
 

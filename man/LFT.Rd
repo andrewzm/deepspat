@@ -28,5 +28,9 @@ LFT(a = NULL, dtype = "float32")
 Sets up a Möbius transformation unit
 }
 \examples{
+\donttest{
+if (reticulate::py_module_available("tensorflow")) {
 layer <- LFT()
+ }
+}
 }

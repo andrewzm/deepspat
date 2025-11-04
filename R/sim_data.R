@@ -15,7 +15,9 @@
 #' @export
 #' @examples
 #' \donttest{
+#' if (reticulate::py_module_available("tensorflow")) {
 #' sim <- sim_data(type = "step1D", ds = 0.001)
+#'  }
 #' }
 sim_data <- function(type = "step1D", ds = 0.001, n = 300L, sigma2y = NULL) {
 

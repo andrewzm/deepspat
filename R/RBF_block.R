@@ -17,7 +17,11 @@
 #' }
 #' @export
 #' @examples
+#' \donttest{
+#' if (reticulate::py_module_available("tensorflow")) {
 #' layer <- RBF_block(res = 1L)
+#'  }
+#' }
 
 RBF_block <- function(res = 1L, lims = c(-0.5, 0.5), dtype = "float32") {
 

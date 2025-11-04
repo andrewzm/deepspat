@@ -16,5 +16,9 @@ No return value, called for side effects.
 Set TensorFlow seed in deepspat package
 }
 \examples{
+\donttest{
+if (reticulate::py_module_available("tensorflow")) {
 set_deepspat_seed(seed = 1L)
+ }
+}
 }

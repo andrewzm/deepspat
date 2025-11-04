@@ -109,7 +109,11 @@ KL_tf <- function(mu1, S1, mu2, S2) {
 #' @return No return value, called for side effects.
 #' @export
 #' @examples
+#' \donttest{
+#' if (reticulate::py_module_available("tensorflow")) {
 #' set_deepspat_seed(seed = 1L)
+#'  }
+#' }
 
 set_deepspat_seed <- function(seed = 1L) {
   # tf$set_random_seed(seed)

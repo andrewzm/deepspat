@@ -30,6 +30,8 @@ Generates simulated data for use in experiments
 }
 \examples{
 \donttest{
+if (reticulate::py_module_available("tensorflow")) {
 sim <- sim_data(type = "step1D", ds = 0.001)
+ }
 }
 }

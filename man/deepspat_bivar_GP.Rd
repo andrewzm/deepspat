@@ -84,6 +84,7 @@ Constructs a deep bivariate compositional spatial model
 }
 \examples{
 \donttest{
+if (reticulate::py_module_available("tensorflow")) {
 df <- data.frame(s1 = rnorm(100), s2 = rnorm(100), z1 = rnorm(100), z2 = rnorm(100))
 layers <- c(AWU(r = 50L, dim = 1L, grad = 200, lims = c(-0.5, 0.5)),
             AWU(r = 50L, dim = 2L, grad = 200, lims = c(-0.5, 0.5)))
@@ -92,5 +93,6 @@ d <- deepspat_bivar_GP(f = z1 + z2 ~ s1 + s2 - 1,
                        layers = layers, method = "REML",
                        family = "matern_nonstat_symm",
                        nsteps = 10L)
+ }
 }
 }
