@@ -70,7 +70,7 @@ logmarglik_GP_matern_reml <- function(logsigma2y_tf, logl_tf, logsigma2_tf, cdf_
 
   ## Compute posterior distribution of weights and the Cholesky factor
   SZ_tf <- tf$add(SY_tf, Sobs_tf) # + jit
-  L_tf <- tf$cholesky_lower(SZ_tf) ###
+  L_tf <- tf$linalg$cholesky(SZ_tf) ###
   L_inv_tf <- tf$linalg$inv(L_tf) ###
   SZ_inv_tf <- tf$matmul(tf$linalg$matrix_transpose(L_inv_tf), L_inv_tf)
 
@@ -286,7 +286,7 @@ logmarglik_GP_bivar_matern_reml <- function(s_tf, s_tf2 = s_tf,
 
   ## Compute posterior distribution of weights and the Cholesky factor
   SZ_tf <- tf$add(SY_tf, Sobs_tf) # + jit
-  L_tf <- tf$cholesky_lower(SZ_tf)
+  L_tf <- tf$linalg$cholesky(SZ_tf)
   L_inv_tf <- tf$linalg$inv(L_tf)
   SZ_inv_tf <- tf$matmul(tf$linalg$matrix_transpose(L_inv_tf), L_inv_tf)
   b <- tf$matmul(tf$linalg$matrix_transpose(X), tf$matmul(SZ_inv_tf, X))
@@ -533,7 +533,7 @@ logmarglik_GP_trivar_matern_reml <- function(s_tf, s_tf2 = s_tf, s_tf3 = s_tf, X
 
   ## Compute posterior distribution of weights and the Cholesky factor
   SZ_tf <- tf$add(SY_tf, Sobs_tf) # + jit
-  L_tf <- tf$cholesky_lower(SZ_tf)
+  L_tf <- tf$linalg$cholesky(SZ_tf)
   L_inv_tf <- tf$linalg$inv(L_tf)
   SZ_inv_tf <- tf$matmul(tf$linalg$matrix_transpose(L_inv_tf), L_inv_tf)
   b <- tf$matmul(tf$linalg$matrix_transpose(X), tf$matmul(SZ_inv_tf, X))

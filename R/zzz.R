@@ -6,7 +6,6 @@ get_tf <- function() {
 
     tf$cholesky_lower <- tf$linalg$cholesky
     tf$cholesky_upper <- function(x) tf$linalg$matrix_transpose(tf$linalg$cholesky(x))
-    tf$matrix_inverse <- tf$linalg$inv
 
     assign(".tf", tf, envir = .deepspat_env)
   }

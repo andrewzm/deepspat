@@ -16,7 +16,7 @@ tr_tf <- function(A) {
 
 safe_chol_tf <- function(A, dtype = "float32") {
   I <- tf$constant(1e-6 * diag(nrow(A)), name = "Imat", dtype = dtype)
-  tf$cholesky_upper(tf$add(A, I))
+  tf$linalg$matrix_transpose(tf$linalg$cholesky(tf$add(A, I)))
 }
 
 atBa_tf <- function(a, B) {
@@ -88,8 +88,8 @@ scale_0_5_tf <- function(s_tf, smin_tf, smax_tf, dtype = "float32") {
 }
 
 KL_tf <- function(mu1, S1, mu2, S2) {
-  R1 <- tf$cholesky_upper(S1)
-  R2 <- tf$cholesky_upper(S2)
+  R1 <- tf$linalg$matrix_transpose(tf$linalg$cholesky(S1))
+  R2 <- tf$linalg$matrix_transpose(tf$linalg$cholesky(S2))
   Q2 <- chol2inv_tf(R2)
   k <- tf$shape(mu1)[1] %>% tf$to_float()
 

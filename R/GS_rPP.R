@@ -75,7 +75,7 @@ GradScore <- function(logphi_tf, logitkappa_tf,
 
   Sobs_tf <- tf$multiply(1e-10, tf$eye(nloc, dtype = "float64"))
   SZ_tf <- tf$add(S_tf, Sobs_tf) # + jit
-  U_tf <- tf$cholesky_upper(SZ_tf)
+  U_tf <- tf$linalg$matrix_transpose(tf$linalg$cholesky(SZ_tf))
   Q_tf <- chol2inv_tf(U_tf)
 
   diagS_tf = tf$reshape(tf$linalg$diag_part(S_tf), c(nloc, 1L))
@@ -406,7 +406,7 @@ GradScore1 <- function(logphi_tf, logitkappa_tf,
 
   Sobs_tf <- tf$multiply(1e-10, tf$eye(nloc, dtype = "float64"))
   SZ_tf <- tf$add(S_tf, Sobs_tf) # + jit
-  U_tf <- tf$cholesky_upper(SZ_tf)
+  U_tf <- tf$linalg$matrix_transpose(tf$linalg$cholesky(SZ_tf))
   Q_tf <- chol2inv_tf(U_tf)
 
   diagS_tf = tf$reshape(tf$linalg$diag_part(S_tf), c(nloc, 1L))

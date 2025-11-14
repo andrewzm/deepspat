@@ -41,7 +41,7 @@ logmarglik2 <- function(outlayer, layers, logsigma2y_tf, logl_tf, logsigma2eta2_
   Seta_tf <- cov_exp_tf(outlayer$knots_tf,
                         sigma2f = sigma2eta2_tf,
                         alpha = 1 / l_tf)
-  cholSeta_tf <- tf$cholesky_upper(Seta_tf)
+  cholSeta_tf <- tf$linalg$matrix_transpose(tf$linalg$cholesky(Seta_tf))
   Qeta_tf <- chol2inv_tf(cholSeta_tf)
   # ----------------------------------------------------------------------------
 
@@ -60,7 +60,7 @@ logmarglik2 <- function(outlayer, layers, logsigma2y_tf, logl_tf, logsigma2eta2_
     tf$multiply(prec_obs) %>%
     tf$add(Qeta_tf)
 
-  R_tf <- tf$cholesky_upper(Qpost_tf)
+  R_tf <- tf$linalg$matrix_transpose(tf$linalg$cholesky(Qpost_tf))
 
   ## AtQoZ
   AtQoZ <- tf$transpose(PHI_tf) %>%
@@ -78,8 +78,7 @@ logmarglik2 <- function(outlayer, layers, logsigma2y_tf, logl_tf, logsigma2eta2_
   ## Compute the marginal log-likelihood
   logsigma2y_tf <- tf$math$log(tf$math$reciprocal(prec_obs))
   Part1 <- tf$constant(-ndata, dtype = "float32") * logsigma2y_tf
-  #Part2 <- logdet_tf(tf$cholesky_lower(Qeta_tf))
-  Part2 <- -logdet_tf(tf$cholesky_lower(Seta_tf))
+  Part2 <- -logdet_tf(tf$linalg$cholesky(Seta_tf))
   Part3 <- -logdet_tf(R_tf)
   Part4 <- tf$squeeze(-ZtQoZ + ZtXZ)
 
@@ -109,7 +108,7 @@ logmarglik_GP <- function(s_in, prec_obs, l_tf, sigma2_tf, z_tf, ndata) {
 
   ## Compute posterior distribution of weights and the Cholesky factor
   SZ_tf <- tf$add(SY_tf, Sobs_tf)
-  L_tf <- tf$cholesky_lower(SZ_tf)
+  L_tf <- tf$linalg$cholesky(SZ_tf)
   a <- tf$linalg$solve(L_tf, z_tf)
 
   Part1 <- -0.5 * logdet_tf(L_tf) # should it be -logdet_tf(L_tf)?
