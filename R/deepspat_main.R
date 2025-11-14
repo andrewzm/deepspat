@@ -29,14 +29,6 @@
 #'  \item{"data_scale_mean_tf"}{Empirical mean of the original data as a \code{TensorFlow} object}
 #'  }
 #' @export
-#' @examples
-#' \dontrun{
-#' df <- data.frame(s = rnorm(100), z = rnorm(100))
-#' dfnew <- data.frame(s = rnorm(20))
-#' layers <- c(AWU(r = 50L, dim = 1L, grad = 200, lims = c(-0.5, 0.5)),
-#'             bisquares1D(r = 50))
-#' d <- deepspat(f = z ~ s - 1, data = df, layers = layers, method = "ML", nsteps = 10L)
-#' }
 
 deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
                      par_init = initvars(),
@@ -79,7 +71,7 @@ deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
       }
     }
 
-  } else if(method == "VB") {print("Not adapted yet.")}
+  } else if(method == "VB") {message("Not adapted yet.")}
 
 
 
