@@ -1,4 +1,4 @@
-#' @title Deep compositional spatial model for extremes
+#' @title Deep compositional spatial model for r-Pareto processes
 #' @description Constructs an extended deep compositional spatial model that supports different estimation methods
 #'   ("GSM" or "WLS") and spatial dependence families (stationary or non-stationary). This function extends the
 #'   basic deepspat model by incorporating additional dependence modeling and pre-training steps for the warping layers.
@@ -48,8 +48,10 @@
 #'   \item{\code{f}}{The model formula.}
 #'   \item{\code{data}}{The data frame used for model fitting.}
 #'   \item{\code{negcost}}{Vector of cost values recorded during training.}
-#'   \item{\code{grad_loss}}{Gradient of the loss (available for the GS method).}
-#'   \item{\code{hess_loss}}{Hessian of the loss (available for the GS method).}
+#'   \item{\code{pairs_tf}}{TensorFlow variable representing the spatial location pairs
+#'     (and, for MRPL, the replicate indices) used in the pairwise / randomized pairwise
+#'     likelihood or WLS objective..}
+#'   \item{\code{pairs_t_tf}}{Tranposed pairs_tf.}
 #'   \item{\code{time}}{Elapsed time for model fitting.}
 #' }
 #' @export
@@ -360,10 +362,7 @@ deepspat_rPP <- function(f, data,
                        dWeight_fun = dWeight_fun,
                        f = f,
                        data = data,
-                       # ndata = ndata,
                        negcost = Objective,
-                       # jaco_loss = jaco_loss,
-                       # hess_loss = hess_loss,
                        pairs_tf = pairs_tf,
                        pairs_t_tf = pairs_t_tf,
                        time = ptm)

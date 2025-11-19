@@ -1,4 +1,5 @@
-#' @title Deep compositional spatial model
+#' @title Deep compositional spatial model for spatial input-warped Gaussian processes (SIWGP) 
+#'   and Spatial Deep Stochastic Process (SDSP)
 #' @description Constructs a deep compositional spatial model
 #' @param f formula identifying the dependent variable and the spatial inputs (RHS can only have one or two variables)
 #' @param data data frame containing the required data
@@ -34,9 +35,6 @@ deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
                      par_init = initvars(),
                      learn_rates = init_learn_rates(),
                      MC = 10L, nsteps) {
-  # f = z ~ s1 + s2 - 1; data = df; layers = layers
-  # method = method; MC = 10L; nsteps = 50L
-  # par_init = initvars(l_top_layer = 0.5); learn_rates = init_learn_rates(eta_mean = 0.01)
 
   stopifnot(is(f, "formula"))
   stopifnot(is(data, "data.frame"))
@@ -76,31 +74,17 @@ deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
 
 
   ## Estimate hyperpriors (mean and variance)
-  ## Estimate hyperpriors (mean and variance)
-  ## Use a linear model of the basis functions to initialise?
-
   ## Measurement-error variance
   logsigma2y_tf <- tf$Variable(log(par_init$sigma2y), name = "sigma2y", dtype = "float32")
-  # sigma2y_tf <- tf$exp(logsigma2y_tf)
-  # precy_tf <- tf$math$reciprocal(sigma2y_tf) # precision of independent variables
 
 
   ## Prior variance of the weights eta ?
   sigma2eta2 <- par_init$sigma2eta_top_layer#var(data[[depvar]] - data_scale_mean)
   logsigma2eta2_tf <- tf$Variable(log(sigma2eta2), name = "sigma2eta", dtype = "float32")
-  # sigma2eta2_tf <- tf$exp(logsigma2eta2_tf)
 
   ## Length scale of process
   l <- par_init$l_top_layer
   logl_tf <- tf$Variable(matrix(log(l)), name = "l", dtype = "float32")
-  # l_tf <- tf$exp(logl_tf)
-
-  ## Prior stuff
-  # Seta_tf <- cov_exp_tf(layers[[nlayers]]$knots_tf,
-  #                       sigma2f = sigma2eta2_tf,
-  #                       alpha = tf$tile(1 / l_tf, c(1L, 2L)))
-  # cholSeta_tf <- tf$cholesky_upper(Seta_tf)
-  # Qeta_tf <- chol2inv_tf(cholSeta_tf)
 
   ###############################################################################################
   Cost_fn = function() {

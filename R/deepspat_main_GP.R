@@ -1,4 +1,4 @@
-#' @title Deep compositional spatial model
+#' @title Deep compositional spatial model for Gaussian processes
 #' @description Constructs a deep compositional spatial model
 #' @param f formula identifying the dependent variables and the spatial inputs in the covariance
 #' @param data data frame containing the required data

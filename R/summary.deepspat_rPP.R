@@ -1,4 +1,4 @@
-#' @title Deep compositional spatial model for extremes
+#' @title Deep compositional spatial model for r-Pareto processes
 #' @description Prediction function for the fitted deepspat_ext object
 #' @param object a deepspat object obtained from fitting a deep compositional spatial model for extremes using r-Pareto processes.
 #' @param newdata a data frame containing the prediction locations.
@@ -13,6 +13,10 @@
 #'   the coordinates are further transformed through additional layers.}
 #'   \item{fitted.phi}{A numeric value representing the fitted spatial range parameter, computed as \code{exp(logphi_tf)}.}
 #'   \item{fitted.kappa}{A numeric value representing the fitted smoothness parameter, computed as \code{2 * sigmoid(logitkappa_tf)}.}
+#'   \item{Sigma.psi}{A numeric matrix giving the estimated covariance matrix of the
+#'     dependence parameters \eqn{\psi = (\phi, \kappa)}, computed via the
+#'     pairwise likelihood / WLS sandwich-type estimator. \code{NULL} if
+#'     \code{uncAss = FALSE}.}
 #' }
 #' @export
 
@@ -51,7 +55,7 @@ summary.deepspat_rPP <- function(object, newdata, uncAss = TRUE, edm_emp = NULL,
   fitted.kappa <- as.numeric(2*tf$sigmoid(d$logitkappa_tf))
 
   # ------------------------------
-  Sigma_psi <- NULL
+  Sigma.psi <- NULL
   if (uncAss) {
     cat("Evauating Jacobian... \n")
     deppar <- tf$Variable(c(fitted.phi, fitted.kappa), dtype=dtype)
@@ -144,7 +148,7 @@ summary.deepspat_rPP <- function(object, newdata, uncAss = TRUE, edm_emp = NULL,
       K = as.matrix(K_tf)
       Jinv = solve(J)
       Ginv <- Jinv %*% K %*% t(Jinv) / dim(d$z_tf)[2]
-      Sigma_psi <- Ginv
+      Sigma.psi <- Ginv
     } else if (d$method == "WLS") {
       edm_emp_tf <- tf$constant(edm_emp, dtype=dtype)
 
@@ -254,7 +258,7 @@ summary.deepspat_rPP <- function(object, newdata, uncAss = TRUE, edm_emp = NULL,
       H = as.matrix(H_tf)
       G = as.matrix(G_tf)
       Hinv = solve(H)
-      Sigma_psi = (Hinv%*%G%*%Hinv)/nrepli
+      Sigma.psi = (Hinv%*%G%*%Hinv)/nrepli
     }
     cat("Done. \n")
   }
@@ -267,5 +271,5 @@ summary.deepspat_rPP <- function(object, newdata, uncAss = TRUE, edm_emp = NULL,
        swarped = as.matrix(s_new_out),
        fitted.phi = fitted.phi,
        fitted.kappa = fitted.kappa,
-       Sigma_psi = Sigma_psi)
+       Sigma.psi = Sigma.psi)
 }

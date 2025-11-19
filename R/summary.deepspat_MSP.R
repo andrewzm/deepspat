@@ -1,4 +1,4 @@
-#' @title Deep compositional spatial model for extremes
+#' @title Deep compositional spatial model for max-stable processes
 #' @description Prediction function for the fitted deepspat_ext object
 #' @param object a deepspat object obtained from fitting a deep compositional spatial model for extremes using max-stable processes.
 #' @param newdata a data frame containing the prediction locations.
@@ -12,6 +12,10 @@
 #'   the coordinates are further transformed through additional layers.}
 #'   \item{fitted.phi}{A numeric value representing the fitted spatial range parameter, computed as \code{exp(logphi_tf)}.}
 #'   \item{fitted.kappa}{A numeric value representing the fitted smoothness parameter, computed as \code{2 * sigmoid(logitkappa_tf)}.}
+#'   \item{Sigma.psi}{A numeric matrix giving the estimated covariance matrix of the
+#'     dependence parameters \eqn{\psi = (\phi, \kappa)}, computed via the
+#'     pairwise likelihood / WLS sandwich-type estimator. \code{NULL} if
+#'     \code{uncAss = FALSE}.}
 #' }
 #' @export
 
@@ -50,7 +54,7 @@ summary.deepspat_MSP <- function(object, newdata, uncAss = TRUE, edm_emp = NULL,
   fitted.phi <- as.numeric(exp(d$logphi_tf))
   fitted.kappa <- as.numeric(2*tf$sigmoid(d$logitkappa_tf))
 
-  Sigma_psi <- NULL
+  Sigma.psi <- NULL
   # ------------------------------
   if (uncAss) {
     cat("Evauating Jacobian... \n")
@@ -158,7 +162,7 @@ summary.deepspat_MSP <- function(object, newdata, uncAss = TRUE, edm_emp = NULL,
       Jprime = as.matrix(J_tf); J = Jprime/p1
       Iprime = as.matrix(I_tf); I = Iprime/(p1^2)
       Jinv = solve(J)
-      Sigma_psi = (Jinv%*%I%*%Jinv + Jinv/p1)/nrepli
+      Sigma.psi = (Jinv%*%I%*%Jinv + Jinv/p1)/nrepli
     } else if (d$method == "WLS") {
       edm_emp_tf <- tf$constant(edm_emp, dtype=dtype)
 
@@ -258,7 +262,7 @@ summary.deepspat_MSP <- function(object, newdata, uncAss = TRUE, edm_emp = NULL,
       H = as.matrix(H_tf)
       G = as.matrix(G_tf)
       Hinv = solve(H)
-      Sigma_psi = (Hinv%*%G%*%Hinv)/nrepli
+      Sigma.psi = (Hinv%*%G%*%Hinv)/nrepli
     }
     cat("Done. \n")
   }
@@ -271,5 +275,5 @@ summary.deepspat_MSP <- function(object, newdata, uncAss = TRUE, edm_emp = NULL,
        swarped = as.matrix(s_new_out),
        fitted.phi = fitted.phi,
        fitted.kappa = fitted.kappa,
-       Sigma_psi = Sigma_psi)
+       Sigma.psi = Sigma.psi)
 }
