@@ -2,7 +2,7 @@
 % Please edit documentation in R/deepspat_main_rPP.R
 \name{deepspat_rPP}
 \alias{deepspat_rPP}
-\title{Deep compositional spatial model for extremes}
+\title{Deep compositional spatial model for r-Pareto processes}
 \usage{
 deepspat_rPP(
   f,
@@ -91,8 +91,10 @@ Default is \code{"float32"}}
   \item{\code{f}}{The model formula.}
   \item{\code{data}}{The data frame used for model fitting.}
   \item{\code{negcost}}{Vector of cost values recorded during training.}
-  \item{\code{grad_loss}}{Gradient of the loss (available for the GS method).}
-  \item{\code{hess_loss}}{Hessian of the loss (available for the GS method).}
+  \item{\code{pairs_tf}}{TensorFlow variable representing the spatial location pairs
+    (and, for MRPL, the replicate indices) used in the pairwise / randomized pairwise
+    likelihood or WLS objective..}
+  \item{\code{pairs_t_tf}}{Tranposed pairs_tf.}
   \item{\code{time}}{Elapsed time for model fitting.}
 }
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/deepspat_main_GP.R
 \name{deepspat_GP}
 \alias{deepspat_GP}
-\title{Deep compositional spatial model}
+\title{Deep compositional spatial model for Gaussian processes}
 \usage{
 deepspat_GP(
   f,

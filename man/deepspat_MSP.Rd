@@ -2,7 +2,7 @@
 % Please edit documentation in R/deepspat_main_MSP.R
 \name{deepspat_MSP}
 \alias{deepspat_MSP}
-\title{Deep compositional spatial model for extremes}
+\title{Deep compositional spatial model for max-stable processes}
 \usage{
 deepspat_MSP(
   f,
@@ -80,13 +80,16 @@ or the probability parameter of Bernoulli r.v. for randomized pairwise likelihoo
   \item{\code{data}}{The data frame used for model fitting.}
   \item{\code{ndata}}{Number of observations in \code{data}.}
   \item{\code{negcost}}{Vector of cost values recorded during training.}
-  \item{\code{grad_loss}}{Gradient of the loss (available for the GS method).}
-  \item{\code{hess_loss}}{Hessian of the loss (available for the GS method).}
+  \item{\code{pairs_tf}}{TensorFlow variable representing the spatial location pairs
+    (and, for MRPL, the replicate indices) used in the pairwise / randomized pairwise
+    likelihood or WLS objective..}
+  \item{\code{p}}{Input size of pair subset for pairwise likelihood, 
+    or the parameter of Bernoulli r.v. for randomized pairwise likelihood.}
   \item{\code{time}}{Elapsed time for model fitting.}
 }
 }
 \description{
 Constructs an extended deep compositional spatial model that supports different estimation methods
-  ("MPL" or "WLS") and spatial dependence families (stationary or non-stationary). This function extends the
+  ("MPL", "MRPL", or "WLS") and spatial dependence families (stationary or non-stationary). This function extends the
   basic deepspat model by incorporating additional dependence modeling and pre-training steps for the warping layers.
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/deepspat_main_bivar_GP.R
 \name{deepspat_bivar_GP}
 \alias{deepspat_bivar_GP}
-\title{Deep bivariate compositional spatial model}
+\title{Deep bivariate compositional spatial model for Gaussian processes}
 \usage{
 deepspat_bivar_GP(
   f,

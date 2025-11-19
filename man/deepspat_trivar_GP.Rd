@@ -2,7 +2,7 @@
 % Please edit documentation in R/deepspat_main_trivar_GP.R
 \name{deepspat_trivar_GP}
 \alias{deepspat_trivar_GP}
-\title{Deep trivariate compositional spatial model}
+\title{Deep trivariate compositional spatial model for Gaussian processes}
 \usage{
 deepspat_trivar_GP(
   f,

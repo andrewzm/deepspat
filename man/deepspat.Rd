@@ -65,6 +65,13 @@ units.
 
 Constructs a deep compositional spatial model
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/andrewzm/deepspat}
+}
+
+}
 \author{
 \strong{Maintainer}: Quan Vu \email{quanvustats@gmail.com}
 

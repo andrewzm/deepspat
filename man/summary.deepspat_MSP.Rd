@@ -2,7 +2,7 @@
 % Please edit documentation in R/summary.deepspat_MSP.R
 \name{summary.deepspat_MSP}
 \alias{summary.deepspat_MSP}
-\title{Deep compositional spatial model for extremes}
+\title{Deep compositional spatial model for max-stable processes}
 \usage{
 \method{summary}{deepspat_MSP}(object, newdata, uncAss = TRUE, edm_emp = NULL, ...)
 }
@@ -25,6 +25,10 @@ A list with the following components:
   the coordinates are further transformed through additional layers.}
   \item{fitted.phi}{A numeric value representing the fitted spatial range parameter, computed as \code{exp(logphi_tf)}.}
   \item{fitted.kappa}{A numeric value representing the fitted smoothness parameter, computed as \code{2 * sigmoid(logitkappa_tf)}.}
+  \item{Sigma.psi}{A numeric matrix giving the estimated covariance matrix of the
+    dependence parameters \eqn{\psi = (\phi, \kappa)}, computed via the
+    pairwise likelihood / WLS sandwich-type estimator. \code{NULL} if
+    \code{uncAss = FALSE}.}
 }
 }
 \description{
