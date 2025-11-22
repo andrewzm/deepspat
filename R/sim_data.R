@@ -1,3 +1,35 @@
+# This function is mainly intended for generating fixed-rank Gaussian process (GP)
+# examples used in the package vignettes and simulations.
+# 
+# In the 2D cases "AWU_RBF_2D", "AWU_RBF_LFT_2D" and "LFT_2D", the latent field
+# is constructed as a *fixed-rank* GP:
+#   - A relatively small set of knots is defined inside the spatial domain
+#     (see the `knots` field inside the corresponding layer objects).
+#   - A covariance matrix on the knot locations is specified via an exponential
+#     kernel, e.g. Sigma_ij = exp(-‖k_i - k_j‖ / l).
+#   - A Gaussian vector of basis coefficients eta ~ N(0, Sigma) is drawn.
+#   - The field on the fine grid is obtained by evaluating compactly supported
+#     radial basis functions (bisquare basis) at each grid location, possibly
+#     after applying one or more warping layers (AWU, RBF_block, LFT), i.e. a
+#     standard basis-function / fixed-rank representation of a GP.
+#
+# The 1D cases ("step1D", "Monterrubio1D", "dampedwave1D") and "step2D" use
+# simple deterministic mean functions on the spatial grid, to which Gaussian
+# measurement error with variance `sigma2y` is added; these are not full GPs.
+#
+# If you want to simulate a *fully stationary and isotropic* Gaussian process
+# (without warping and without a fixed-rank basis representation), you should
+# construct it separately, e.g. by:
+#   - defining a stationary, isotropic covariance function C(h) on the fine grid,
+#   - forming the corresponding covariance matrix on all grid locations, and
+#   - drawing from the associated multivariate normal distribution.
+# Simple helper code for such simulations is provided in the example repository:
+#   https://github.com/shaox0a/deepspat_examples
+#
+# The function below wraps all of the above into a single interface and returns
+# both the fine grid, observation locations, and the simulated latent field and
+# noisy observations.
+
 #' @title Generate simulation data for testing
 #' @description Generates simulated data for use in experiments
 #' @param type type of function. Can be 'step1D', 'Monterrubio1D', 'dampedwave1D', 'step2D', 'AWU_RBF_2D', or 'AWU_RBF_LFT_2D'
