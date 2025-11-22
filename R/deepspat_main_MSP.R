@@ -46,8 +46,7 @@
 #'   \item{\code{pairs_tf}}{TensorFlow variable representing the spatial location pairs
 #'     (and, for MRPL, the replicate indices) used in the pairwise / randomized pairwise
 #'     likelihood or WLS objective..}
-#'   \item{\code{p}}{Input size of pair subset for pairwise likelihood, 
-#'     or the parameter of Bernoulli r.v. for randomized pairwise likelihood.}
+#'   \item{\code{p}}{The parameter of Bernoulli r.v. for pairwise likelihood and randomized pairwise likelihood.}
 #'   \item{\code{time}}{Elapsed time for model fitting.}
 #' }
 #' @export
@@ -62,7 +61,7 @@ deepspat_MSP <- function(f, data,
                          nsteps = 100L,
                          nsteps_pre = 100L,
                          edm_emp = NULL,        # for WLS
-                         p = c(0,1),            # for PL (sampled subset) and RPL
+                         p = c(0,1),            # for PL and RPL
                          pen_coef = 0,
                          show = TRUE,
                          ...) {
@@ -90,16 +89,20 @@ deepspat_MSP <- function(f, data,
   pairs_all = t(do.call("cbind", sapply(0:(nrow(data)-2), function(k1){
     sapply((k1+1):(nrow(data)-1), function(k2){ c(k1,k2) } ) } )))
   if (p < 1 & method == "MPL") {
-    pairs = pairs_all[sample(1:nrow(pairs_all), round(nrow(pairs_all)*p)),]
+    # pairs = pairs_all[sample(1:nrow(pairs_all), round(nrow(pairs_all)*p)),]
+    pi = rbinom(nrow(pairs_all), size = 1, prob = p)
+    if (all(pi == 0L)) { pi[sample.int(nrow(pairs_all), 1L)] = 1L }
+    pairs = pairs_all[which(pi==1), ]
   } else if (p < 1 & method == "MRPL") {
-    pairs0 = do.call("rbind", sapply(1:(ncol(data)-2), function(i) {
-      pi = rbinom(nrow(pairs_all), size = 1, prob = 0.01)
-      cbind(rep(i-1,sum(pi)), pairs_all[which(pi==1), ], which(pi==1))  }))
+    pairs0 = do.call("rbind", sapply(1:(ncol(data)-2), function(k) {
+      pi = rbinom(nrow(pairs_all), size = 1, prob = p)
+      cbind(rep(k-1,sum(pi)), # for each replicate
+            pairs_all[which(pi==1), ], 
+            which(pi==1))  }))
 
     pairs_id = pairs0[,4] # id of sampled pairs
     pairs_id_uni = unique(pairs_id)
     recover_pos = match(pairs_id, pairs_id_uni)-1L
-    # recover_pos = sapply(pairs_id, function(id) which(pairs_id_uni == id))-1L
     recover_pos_tf = tf$reshape(tf$constant(recover_pos, dtype = tf$int32),
                                 c(length(recover_pos), 1L))
 
@@ -407,7 +410,6 @@ deepspat_MSP <- function(f, data,
                        data = data,
                        ndata = ndata,
                        negcost = Objective,
-                       # jaco_loss = jaco_loss,
                        pairs_tf = pairs_tf,
                        p = p,
                        time = ptm)

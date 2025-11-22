@@ -66,7 +66,10 @@ summary.deepspat_MSP <- function(object, newdata, uncAss = TRUE, edm_emp = NULL,
       if (d$method == "MRPL") {
         pairs_all = t(do.call("cbind", sapply(0:(nrow(d$s_tf)-2), function(k1){
           sapply((k1+1):(nrow(d$s_tf)-1), function(k2){ c(k1,k2) } ) } )))
-        pairs = pairs_all[sample(1:nrow(pairs_all), round(nrow(pairs_all)*p1)),]
+        pi = rbinom(nrow(pairs_all), size = 1, prob = p)
+        if (all(pi == 0L)) { pi[sample.int(nrow(pairs_all), 1L)] = 1L }
+        pairs = pairs_all[which(pi==1), ]
+        # pairs = pairs_all[sample(1:nrow(pairs_all), round(nrow(pairs_all)*p1)),]
         pairs_tf =  tf$reshape(tf$constant(pairs, dtype = tf$int32),
                                c(nrow(pairs), ncol(pairs), 1L))
       } else if (d$method == "MPL") { pairs_tf = d$pairs_tf }
