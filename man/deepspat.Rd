@@ -69,6 +69,7 @@ Constructs a deep compositional spatial model
 Useful links:
 \itemize{
   \item \url{https://github.com/andrewzm/deepspat}
+  \item Report bugs at \url{https://github.com/andrewzm/deepspat/issues}
 }
 
 }

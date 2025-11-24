@@ -13,7 +13,7 @@ Resources
 
 A number of manuscripts explain the theory and methodology behind the deep compositional
 spatial models in details, see [here](https://doi.org/10.1080/01621459.2021.1887741)
-for the univariate setting, [here](https://www.jstor.org/stable/27164242) for the multivariate setting, [here](https://www.sciencedirect.com/science/article/pii/S2211675323000179) 
+for the univariate setting, [here](https://www.jstor.org/stable/27164242) for the multivariate setting, [here](https://doi.org/10.1016/j.spasta.2023.100742) 
 for the spatio-temporal setting, and [here](https://doi.org/10.48550/arXiv.2505.12548) 
 for the extremes.
 
