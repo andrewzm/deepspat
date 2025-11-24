@@ -69,7 +69,9 @@ deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
       }
     }
 
-  } else if(method == "VB") {message("Not adapted yet.")}
+  } else if(method == "VB") {message("The option 'VB' is no longer available. 
+  The last version to allow this option is deepspat v1, available from GitHub, which requires TensorFlow v1. 
+  There, VB is implemented for just the Gaussian spatial process model with basis function decomposition.")}
 
 
 
