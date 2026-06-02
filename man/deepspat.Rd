@@ -65,6 +65,20 @@ units.
 
 Constructs a deep compositional spatial model
 }
+\examples{
+\donttest{
+if (reticulate::py_module_available("tensorflow") && reticulate::py_module_available("scipy")) {
+df <- data.frame(s1 = rnorm(100), s2 = rnorm(100), z = rnorm(100))
+layers <- c(AWU(r = 50L, dim = 1L, grad = 200, lims = c(-0.5, 0.5)),
+            AWU(r = 50L, dim = 2L, grad = 200, lims = c(-0.5, 0.5)),
+            bisquares2D(r = 100))
+d <- deepspat(f = z ~ s1 + s2 - 1,
+              data = df,
+              layers = layers, method = "ML",
+              nsteps = 10L)
+ }
+}
+}
 \seealso{
 Useful links:
 \itemize{
