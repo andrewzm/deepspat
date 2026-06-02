@@ -22,17 +22,10 @@ An informal blog post summarising the manuscript concerning the univariate setti
 Installation Instructions
 -------------------------
 
-This is an `R` package. Please install `devtools` and then install this package by typing
-```
-library("devtools")
-install_github("andrewzm/deepspat")
-```
-in an `R` console.
+Please find the installation guide in the file Install_guide.Rmd.
 
 
 Reproducible Code
 -----------------
 
 Code using this package for reproducing the results shown in the manuscript describing the univariate setting is available in the [supplemental material of our first article](https://doi.org/10.1080/01621459.2021.1887741). Code for the results shown in manuscript describing the multivariate setting is available [here](https://github.com/quanvu17/deepspat_multivar). 
-
-Please note that for this version of `deepspat` you will require at least `TensorFlow 2.15`.
