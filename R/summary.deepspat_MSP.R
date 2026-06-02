@@ -57,7 +57,7 @@ summary.deepspat_MSP <- function(object, newdata, uncAss = TRUE, edm_emp = NULL,
   Sigma.psi <- NULL
   # ------------------------------
   if (uncAss) {
-    cat("Evauating Jacobian... \n")
+    cat("Evaluating Jacobian... \n")
     deppar <- tf$Variable(c(fitted.phi, fitted.kappa), dtype=dtype)
     if (d$method %in% c("MPL", "MRPL")) {
       # using all pairs when estimating J, K is intractable
@@ -136,7 +136,7 @@ summary.deepspat_MSP <- function(object, newdata, uncAss = TRUE, edm_emp = NULL,
     }
     # ------------------------------
 
-    cat("Evauating covariance... \n")
+    cat("Evaluating covariance... \n")
     if (d$method %in% c("MPL", "MRPL")) {
       npairs <- tf$shape(jaco_loss)[1]                      # 1248
       nrepli <- dim(d$z_tf)[2]                      # 192

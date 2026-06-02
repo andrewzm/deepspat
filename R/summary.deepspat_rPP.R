@@ -57,7 +57,7 @@ summary.deepspat_rPP <- function(object, newdata, uncAss = TRUE, edm_emp = NULL,
   # ------------------------------
   Sigma.psi <- NULL
   if (uncAss) {
-    cat("Evauating Jacobian... \n")
+    cat("Evaluating Jacobian... \n")
     deppar <- tf$Variable(c(fitted.phi, fitted.kappa), dtype=dtype)
     if (d$method == "GSM") {
       deppar <- tf$Variable(c(fitted.phi, fitted.kappa), dtype=dtype)
@@ -134,7 +134,7 @@ summary.deepspat_rPP <- function(object, newdata, uncAss = TRUE, edm_emp = NULL,
     }
     # ------------------------------
 
-    cat("Evauating covariance... \n")
+    cat("Evaluating covariance... \n")
     if (d$method == "GSM") {
       # var of estimated dependence parameters
       jacoi <- tf$expand_dims(jaco_loss, axis = -1L)
