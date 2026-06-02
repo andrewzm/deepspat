@@ -1,4 +1,4 @@
-#' @title Deep compositional spatial model for spatial input-warped Gaussian processes (SIWGP) 
+#' @title Deep compositional spatial model for spatial input-warped Gaussian processes (SIWGP)
 #'   and Spatial Deep Stochastic Process (SDSP)
 #' @description Constructs a deep compositional spatial model
 #' @param f formula identifying the dependent variable and the spatial inputs (RHS can only have one or two variables)
@@ -30,6 +30,19 @@
 #'  \item{"data_scale_mean_tf"}{Empirical mean of the original data as a \code{TensorFlow} object}
 #'  }
 #' @export
+#' @examples
+#' \donttest{
+#' if (reticulate::py_module_available("tensorflow") && reticulate::py_module_available("scipy")) {
+#' df <- data.frame(s1 = rnorm(100), s2 = rnorm(100), z = rnorm(100))
+#' layers <- c(AWU(r = 50L, dim = 1L, grad = 200, lims = c(-0.5, 0.5)),
+#'             AWU(r = 50L, dim = 2L, grad = 200, lims = c(-0.5, 0.5)),
+#'             bisquares2D(r = 100))
+#' d <- deepspat(f = z ~ s1 + s2 - 1,
+#'               data = df,
+#'               layers = layers, method = "ML",
+#'               nsteps = 10L)
+#'  }
+#' }
 
 deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
                      par_init = initvars(),
@@ -69,8 +82,8 @@ deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
       }
     }
 
-  } else if(method == "VB") {message("The option 'VB' is no longer available. 
-  The last version to allow this option is deepspat v1, available from GitHub, which requires TensorFlow v1. 
+  } else if(method == "VB") {message("The option 'VB' is no longer available.
+  The last version to allow this option is deepspat v1, available from GitHub, which requires TensorFlow v1.
   There, VB is implemented for just the Gaussian spatial process model with basis function decomposition.")}
 
 
