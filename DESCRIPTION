@@ -29,5 +29,5 @@ SystemRequirements: TensorFlow (https://www.tensorflow.org/),
 Encoding: UTF-8
 RoxygenNote: 7.3.2
 NeedsCompilation: no
-URL: https://github.com/andrewzm/deepspat
+URL: https://cran.r-project.org/package=deepspat
 BugReports: https://github.com/andrewzm/deepspat/issues
