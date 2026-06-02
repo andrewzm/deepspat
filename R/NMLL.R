@@ -95,30 +95,30 @@ logmarglik2 <- function(outlayer, layers, logsigma2y_tf, logl_tf, logsigma2eta2_
 
 
 
-
-logmarglik_GP <- function(s_in, prec_obs, l_tf, sigma2_tf, z_tf, ndata) {
-
-
-  SY_tf <-  cov_exp_tf(x1 = s_in,
-                       sigma2f = sigma2_tf,
-                       alpha = tf$tile(1 / l_tf, c(1L, 2L)))
-
-  Imat <- tf$diag(rep(1, nrow(z_tf)))
-  Sobs_tf <- Imat / prec_obs
-
-  ## Compute posterior distribution of weights and the Cholesky factor
-  SZ_tf <- tf$add(SY_tf, Sobs_tf)
-  L_tf <- tf$linalg$cholesky(SZ_tf)
-  a <- tf$linalg$solve(L_tf, z_tf)
-
-  Part1 <- -0.5 * logdet_tf(L_tf) # should it be -logdet_tf(L_tf)?
-  Part2 <- -0.5 * tf$reduce_sum(tf$square(a))
-
-  Cost <- -(Part1 + Part2)
-
-  list(Cost = Cost)
-
-}
+## Unused code
+#logmarglik_GP <- function(s_in, prec_obs, l_tf, sigma2_tf, z_tf, ndata) {
+#
+#
+#  SY_tf <-  cov_exp_tf(x1 = s_in,
+#                       sigma2f = sigma2_tf,
+#                       alpha = tf$tile(1 / l_tf, c(1L, 2L)))
+#
+#  Imat <- tf$diag(rep(1, nrow(z_tf)))
+#  Sobs_tf <- Imat / prec_obs
+#
+#  ## Compute posterior distribution of weights and the Cholesky factor
+#  SZ_tf <- tf$add(SY_tf, Sobs_tf)
+#  L_tf <- tf$linalg$cholesky(SZ_tf)
+#  a <- tf$linalg$solve(L_tf, z_tf)
+#
+#  Part1 <- -0.5 * logdet_tf(L_tf) # should it be -logdet_tf(L_tf)?
+#  Part2 <- -0.5 * tf$reduce_sum(tf$square(a))
+#
+#  Cost <- -(Part1 + Part2)
+#
+#  list(Cost = Cost)
+#
+#}
 
 
 # logmarglik <- function(s_in, outlayer, Qobs_tf, Qeta_tf, z_tf) {
