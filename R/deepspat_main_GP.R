@@ -1,5 +1,5 @@
-#' @title Deep compositional spatial model for Gaussian processes
-#' @description Constructs a deep compositional spatial model
+#' @title Fit a univariate Gaussian process deepspat model
+#' @description Fits a stationary or nonstationary univariate Gaussian process model with optional spatial warping.
 #' @param f formula identifying the dependent variables and the spatial inputs in the covariance
 #' @param data data frame containing the required data
 #' @param g formula identifying the independent variables in the linear trend

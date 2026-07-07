@@ -1,5 +1,5 @@
-#' @title Deep bivariate compositional spatial model for Gaussian processes
-#' @description Constructs a deep bivariate compositional spatial model
+#' @title Fit a bivariate Gaussian process deepspat model
+#' @description Fits a stationary or nonstationary bivariate Gaussian process model with symmetric or asymmetric dependence.
 #' @param f formula identifying the dependent variables and the spatial inputs in the covariance
 #' @param data data frame containing the required data
 #' @param g formula identifying the independent variables in the linear trend

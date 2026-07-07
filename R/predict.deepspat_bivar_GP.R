@@ -1,5 +1,5 @@
-#' @title Deep bivariate compositional spatial model
-#' @description Prediction function for the fitted deepspat_bivar_GP object
+#' @title Predict from a fitted bivariate Gaussian process model
+#' @description Computes predictions and prediction intervals from a fitted \code{deepspat_bivar_GP} object.
 #' @param object the deepspat_bivar_GP object
 #' @param newdata data frame containing the prediction locations
 #' @param ... currently unused

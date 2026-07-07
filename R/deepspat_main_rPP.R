@@ -1,4 +1,4 @@
-#' @title Deep compositional spatial model for r-Pareto processes
+#' @title Fit an r-Pareto process deepspat model
 #' @description Constructs an extended deep compositional spatial model that supports different estimation methods
 #'   ("GSM" or "WLS") and spatial dependence families (stationary or non-stationary). This function extends the
 #'   basic deepspat model by incorporating additional dependence modeling and pre-training steps for the warping layers.

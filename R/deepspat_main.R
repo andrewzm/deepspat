@@ -1,6 +1,5 @@
-#' @title Deep compositional spatial model for spatial input-warped Gaussian processes (SIWGP)
-#'   and Spatial Deep Stochastic Process (SDSP)
-#' @description Constructs a deep compositional spatial model
+#' @title Fit a spatial input-warped Gaussian process or spatial deep stochastic process
+#' @description Fits the original deepspat model using either SIWGP or SDSP inference.
 #' @param f formula identifying the dependent variable and the spatial inputs (RHS can only have one or two variables)
 #' @param data data frame containing the required data
 #' @param layers list containing the warping layers

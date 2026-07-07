@@ -1,5 +1,5 @@
-#' @title Deep compositional spatial model
-#' @description Prediction function for the fitted deepspat object
+#' @title Predict from a fitted deepspat model
+#' @description Computes predictions and prediction intervals from a fitted \code{deepspat} object.
 #' @param object the deepspat object
 #' @param newdata data frame containing the prediction locations
 #' @param nsims number of simulations from the Gaussian mixture components (SDSP only)

@@ -1,5 +1,5 @@
-#' @title Deep compositional spatial model
-#' @description Prediction function for the fitted deepspat_GP object
+#' @title Predict from a fitted univariate Gaussian process model
+#' @description Computes predictions and prediction intervals from a fitted \code{deepspat_GP} object.
 #' @param object the deepspat_GP object
 #' @param newdata data frame containing the prediction locations
 #' @param ... currently unused

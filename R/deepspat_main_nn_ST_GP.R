@@ -1,5 +1,5 @@
-#' @title Deep compositional spatio-temporal model (with nearest neighbors) for Gaussian processes
-#' @description Constructs a deep compositional spatio-temporal model (with nearest neighbors)
+#' @title Fit a nearest-neighbor spatio-temporal Gaussian process deepspat model
+#' @description Fits a stationary or nonstationary spatio-temporal Gaussian process model using a nearest-neighbor approximation.
 #' @param f formula identifying the dependent variables and the spatial inputs in the covariance
 #' @param data data frame containing the required data
 #' @param g formula identifying the independent variables in the linear trend

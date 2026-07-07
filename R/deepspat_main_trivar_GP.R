@@ -1,5 +1,5 @@
-#' @title Deep trivariate compositional spatial model for Gaussian processes
-#' @description Constructs a deep trivariate compositional spatial model
+#' @title Fit a trivariate Gaussian process deepspat model
+#' @description Fits a stationary or nonstationary trivariate Gaussian process model with symmetric or asymmetric dependence.
 #' @param f formula identifying the dependent variables and the spatial inputs in the covariance
 #' @param data data frame containing the required data
 #' @param g formula identifying the independent variables in the linear trend

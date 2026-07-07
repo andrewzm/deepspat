@@ -1,4 +1,4 @@
-#' @title Deep compositional spatial model for max-stable processes
+#' @title Fit a max-stable Brown-Resnick deepspat model
 #' @description Constructs an extended deep compositional spatial model that supports different estimation methods
 #'   ("MPL", "MRPL", or "WLS") and spatial dependence families (stationary or non-stationary). This function extends the
 #'   basic deepspat model by incorporating additional dependence modeling and pre-training steps for the warping layers.

@@ -1,5 +1,5 @@
-#' @title Deep compositional spatial model for max-stable processes
-#' @description Prediction function for the fitted deepspat_ext object
+#' @title Summarize a fitted max-stable process model
+#' @description Computes warped coordinates, fitted dependence parameters, and optional uncertainty estimates for a fitted \code{deepspat_MSP} object.
 #' @param object a deepspat object obtained from fitting a deep compositional spatial model for extremes using max-stable processes.
 #' @param newdata a data frame containing the prediction locations.
 #' @param uncAss assess the uncertainty of dependence parameters or not
