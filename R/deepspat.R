@@ -14,7 +14,7 @@
 #'   \item \code{deepspat_MSP()} and \code{deepspat_rPP()} fit extreme-value models based on max-stable and r-Pareto processes.
 #' }
 #'
-#' Prediction methods are provided for fitted Gaussian process models through \code{predict.deepspat*()} methods, and summaries for fitted extreme-value models are provided through \code{summary.deepspat_MSP()} and \code{summary.deepspat_rPP()}.
+#' Prediction, summary, plot, and print methods are provided for fitted Gaussian process and extreme-value models through standard S3 methods.
 #' Warping layers and basis components can be constructed with \code{AFF_1D()}, \code{AFF_2D()}, \code{AWU()}, \code{LFT()}, \code{RBF_block()}, \code{bisquares1D()}, and \code{bisquares2D()}.
 #' @name deepspat
 #' @import dplyr

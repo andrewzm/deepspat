@@ -82,11 +82,25 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1,
   # family = "matern_nonstat_symm"
 
 
-  stopifnot(is(f, "formula"))
-  stopifnot(is(data, "data.frame"))
+  deepspat_check_formula_data(f, data, response_count = 3L, numeric = TRUE)
+  deepspat_check_g_data(g, data)
+  deepspat_check_positive_integer(nsteps, "nsteps")
+  deepspat_check_required_list(par_init, c("sigma2y", "l_top_layer", "nu"),
+                               "par_init")
   method = match.arg(method, c("REML"))
   family = match.arg(family, c("matern_stat_symm", "matern_stat_asymm",
                                "matern_nonstat_symm", "matern_nonstat_asymm"))
+  if (family %in% c("matern_nonstat_symm", "matern_nonstat_asymm")) {
+    deepspat_check_layers(layers)
+  }
+  if (family %in% c("matern_stat_asymm", "matern_nonstat_asymm")) {
+    deepspat_check_layers(layers_asym_2, "layers_asym_2")
+    deepspat_check_layers(layers_asym_3, "layers_asym_3")
+    if (length(layers_asym_2) != length(layers_asym_3)) {
+      stop("`layers_asym_2` and `layers_asym_3` must have the same length.",
+           call. = FALSE)
+    }
+  }
   mmat <- model.matrix(f, data)
   X1 <- model.matrix(g, data)
   matrix0 <- matrix(rep(0, ncol(X1)* nrow(X1)), ncol=ncol(X1))
@@ -226,7 +240,7 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1,
 
   ##############################################################
   if (family == "matern_nonstat_symm"){
-    stopifnot(is.list(layers))
+    deepspat_check_layers(layers)
     nlayers <- length(layers)
     scalings <- list(scale_lims_tf(s_tf))
     s_tf <- scale_0_5_tf(s_tf, scalings[[1]]$min, scalings[[1]]$max)
@@ -404,9 +418,12 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1,
 
   ##############################################################
   if (family %in% c("matern_stat_asymm", "matern_nonstat_asymm")){
-    stopifnot(is.list(layers_asym_2))
-    stopifnot(is.list(layers_asym_3))
-    stopifnot(length(layers_asym_2) == length(layers_asym_3))
+    deepspat_check_layers(layers_asym_2, "layers_asym_2")
+    deepspat_check_layers(layers_asym_3, "layers_asym_3")
+    if (length(layers_asym_2) != length(layers_asym_3)) {
+      stop("`layers_asym_2` and `layers_asym_3` must have the same length.",
+           call. = FALSE)
+    }
     nlayers_asym <- length(layers_asym_2)
     scalings_asym <- list(scale_lims_tf(s_tf))
     s_tf <- scale_0_5_tf(s_tf, scalings_asym[[1]]$min, scalings_asym[[1]]$max)
@@ -629,7 +646,7 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1,
       #   }
       # }
 
-      stopifnot(is.list(layers))
+      deepspat_check_layers(layers)
       method = match.arg(method, "REML")
       nlayers <- length(layers)
 
@@ -921,7 +938,7 @@ deepspat_trivar_GP <- function(f, data, g = ~ 1,
                        z_tf_3 = z_tf_3,
                        family = family)
 
-    class(deepspat.obj) <- "deepspat_trivar_GP"
+    class(deepspat.obj) <- c("deepspat_trivar_GP", "deepspat")
     deepspat.obj
 
 }

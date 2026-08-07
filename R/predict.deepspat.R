@@ -13,6 +13,10 @@
 
 predict.deepspat <- function(object, newdata, nsims = 100L, ...) {
 
+  if (missing(newdata)) {
+    stop("`newdata` must be a data frame.", call. = FALSE)
+  }
+  deepspat_check_newdata(object, newdata)
   d <- object
   mmat <- model.matrix(update(d$f, NULL ~ .), newdata)
   s_tf <- tf$constant(mmat, dtype = "float32", name = "s")

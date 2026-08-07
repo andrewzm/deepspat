@@ -48,10 +48,21 @@ deepspat <- function(f, data, layers = NULL, method = c("VB", "ML"),
                      learn_rates = init_learn_rates(),
                      MC = 10L, nsteps) {
 
-  stopifnot(is(f, "formula"))
-  stopifnot(is(data, "data.frame"))
-  stopifnot(is.list(layers))
+  deepspat_check_formula_data(f, data, response_count = 1L, numeric = TRUE)
+  deepspat_check_layers(layers)
+  if (missing(nsteps)) {
+    stop("`nsteps` must be a positive integer.", call. = FALSE)
+  }
+  deepspat_check_positive_integer(nsteps, "nsteps")
+  deepspat_check_required_list(par_init,
+                               c("sigma2y", "sigma2eta_top_layer",
+                                 "l_top_layer"),
+                               "par_init")
   method = match.arg(method, c("VB", "ML"))
+  if (method == "VB") {
+    stop("`method = 'VB'` is no longer supported; use `method = 'ML'`.",
+         call. = FALSE)
+  }
   mmat <- model.matrix(f, data)
 
   s_tf <- tf$constant(mmat, name = "s", dtype = "float32")

@@ -57,11 +57,20 @@ deepspat_GP <- function(f, data, g = ~ 1, layers = NULL,
   # method = method; family = family; nsteps = 150L;
   # par_init = initvars(l_top_layer = 1); learn_rates = init_learn_rates(eta_mean = 0.02)
 
-  stopifnot(is(f, "formula"))
-  stopifnot(is(data, "data.frame"))
+  deepspat_check_formula_data(f, data, response_count = 1L, numeric = TRUE)
+  deepspat_check_g_data(g, data)
+  deepspat_check_positive_integer(nsteps, "nsteps")
+  deepspat_check_required_list(par_init, c("sigma2y", "l_top_layer"),
+                               "par_init")
   method = match.arg(method, c("REML"))
   family = match.arg(family, c("exp_stat", "exp_nonstat",
                                "matern_stat", "matern_nonstat"))
+  if (family %in% c("matern_stat", "matern_nonstat")) {
+    deepspat_check_required_list(par_init, "nu", "par_init")
+  }
+  if (family %in% c("exp_nonstat", "matern_nonstat")) {
+    deepspat_check_layers(layers)
+  }
   mmat <- model.matrix(f, data)
   X1 <- model.matrix(g, data)
   X <- tf$constant(X1, dtype="float32")
@@ -161,7 +170,7 @@ deepspat_GP <- function(f, data, g = ~ 1, layers = NULL,
   ### matern_nonstat
   if (family %in% c("exp_nonstat", "matern_nonstat")){
 
-    stopifnot(is.list(layers))
+    deepspat_check_layers(layers)
     nlayers <- length(layers)
 
     scalings <- list(scale_lims_tf(s_tf))
@@ -351,6 +360,6 @@ deepspat_GP <- function(f, data, g = ~ 1, layers = NULL,
                        z_tf = z_tf,
                        family = family)
 
-  class(deepspat.obj) <- "deepspat_GP"
+  class(deepspat.obj) <- c("deepspat_GP", "deepspat")
   deepspat.obj
 }

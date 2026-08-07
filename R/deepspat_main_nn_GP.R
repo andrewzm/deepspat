@@ -51,10 +51,25 @@ deepspat_nn_GP <- function(f, data, g = ~ 1, layers = NULL,
   # par_init = initvars(l_top_layer = 0.5); learn_rates = init_learn_rates(eta_mean = 0.01)
 
 
-  stopifnot(is(f, "formula"))
-  stopifnot(is(data, "data.frame"))
+  deepspat_check_formula_data(f, data, response_count = 1L, numeric = TRUE)
+  deepspat_check_g_data(g, data)
+  deepspat_check_positive_integer(nsteps, "nsteps")
+  deepspat_check_required_list(par_init, c("sigma2y", "l_top_layer"),
+                               "par_init")
+  if (missing(order_id)) {
+    stop("`order_id` must have length equal to `nrow(data)`.",
+         call. = FALSE)
+  }
+  if (missing(nn_id)) {
+    stop("`nn_id` must be a nearest-neighbor index matrix.",
+         call. = FALSE)
+  }
+  deepspat_check_nn_setup(order_id, nn_id, m, nrow(data))
   method = match.arg(method, c("REML"))
   family = match.arg(family, c("exp_stat", "exp_nonstat"))
+  if (family == "exp_nonstat") {
+    deepspat_check_layers(layers)
+  }
   mmat <- model.matrix(f, data)
   X1 <- model.matrix(g, data)
   X <- tf$constant(X1, dtype="float32")
@@ -144,7 +159,7 @@ deepspat_nn_GP <- function(f, data, g = ~ 1, layers = NULL,
   if (family %in% c("exp_nonstat")){
 
 
-    stopifnot(is.list(layers))
+    deepspat_check_layers(layers)
     nlayers <- length(layers)
     scalings <- list(scale_lims_tf(s_tf))
     s_tf <- scale_0_5_tf(s_tf, scalings[[1]]$min, scalings[[1]]$max)
@@ -329,7 +344,7 @@ deepspat_nn_GP <- function(f, data, g = ~ 1, layers = NULL,
                        m = m,
                        family = family)
 
-  class(deepspat.obj) <- "deepspat_nn_GP"
+  class(deepspat.obj) <- c("deepspat_nn_GP", "deepspat")
   deepspat.obj
 
 }

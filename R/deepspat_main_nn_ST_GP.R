@@ -66,11 +66,31 @@ deepspat_nn_ST_GP <- function(f, data, g = ~ 1,
   # par_init = initvars(l_top_layer = 1)
   # learn_rates = init_learn_rates(eta_mean = 0.1)
 
-  stopifnot(is(f, "formula"))
-  stopifnot(is(data, "data.frame"))
+  deepspat_check_formula_data(f, data, response_count = 1L, numeric = TRUE)
+  deepspat_check_g_data(g, data)
+  if (length(deepspat_rhs_vars(f)) < 2L) {
+    stop("`f` must include at least one spatial variable and one temporal variable.",
+         call. = FALSE)
+  }
+  deepspat_check_positive_integer(nsteps, "nsteps")
+  deepspat_check_required_list(par_init, c("sigma2y", "l_top_layer"),
+                               "par_init")
+  if (missing(order_id)) {
+    stop("`order_id` must have length equal to `nrow(data)`.",
+         call. = FALSE)
+  }
+  if (missing(nn_id)) {
+    stop("`nn_id` must be a nearest-neighbor index matrix.",
+         call. = FALSE)
+  }
+  deepspat_check_nn_setup(order_id, nn_id, m, nrow(data))
   method = match.arg(method, "REML")
   family = match.arg(family, c("exp_stat_sep", "exp_stat_asym",
                                "exp_nonstat_sep", "exp_nonstat_asym"))
+  if (family %in% c("exp_nonstat_sep", "exp_nonstat_asym")) {
+    deepspat_check_layers(layers_spat, "layers_spat")
+    deepspat_check_layers(layers_temp, "layers_temp")
+  }
   mmat <- model.matrix(f, data)
   X1 <- model.matrix(g, data)
   X <- tf$constant(X1, dtype="float32")
@@ -242,8 +262,8 @@ deepspat_nn_ST_GP <- function(f, data, g = ~ 1,
   ##############################################################################
   if (family %in% c("exp_nonstat_sep", "exp_nonstat_asym")){
 
-    stopifnot(is.list(layers_spat))
-    stopifnot(is.list(layers_temp))
+    deepspat_check_layers(layers_spat, "layers_spat")
+    deepspat_check_layers(layers_temp, "layers_temp")
 
     nlayers_spat <- length(layers_spat)
     scalings <- list(scale_lims_tf(s_tf))
@@ -541,7 +561,7 @@ deepspat_nn_ST_GP <- function(f, data, g = ~ 1,
                        negcost = Objective,
                        z_tf = z_tf,
                        m = m)
-  class(deepspat.obj) <- "deepspat_nn_ST_GP"
+  class(deepspat.obj) <- c("deepspat_nn_ST_GP", "deepspat")
   deepspat.obj
 
 }

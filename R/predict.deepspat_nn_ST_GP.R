@@ -3,6 +3,8 @@
 #' @param object the deepspat_nn_ST_GP object
 #' @param newdata data frame containing the prediction locations
 #' @param nn_id nearest neighbors index
+#' @param type optional prediction type: latent process, response, warped coordinates, or covariance map
+#' @param reference reference row index for \code{type = "covariance"}
 #' @param ... currently unused
 #' @return \code{predict.deepspat_nn_ST_GP} returns a list with the following item
 #' \describe{
@@ -13,8 +15,19 @@
 #'  \item{"newdata_twarped"}{New prediction locations on the temporal warped domain}
 #'  }
 #' @export
-predict.deepspat_nn_ST_GP <- function(object, newdata, nn_id, ...) {
+predict.deepspat_nn_ST_GP <- function(object, newdata, nn_id = NULL,
+                                      type = NULL,
+                                      reference = NULL, ...) {
 
+  if (missing(newdata)) {
+    stop("`newdata` must be a data frame.", call. = FALSE)
+  }
+  deepspat_check_newdata(object, newdata)
+  type <- if (is.null(type)) "process" else
+    match.arg(type, c("process", "response", "warp", "covariance"))
+  if (type %in% c("process", "response")) {
+    deepspat_check_nn_pred(nn_id, nrow(newdata))
+  }
   d <- object
   mmat <- model.matrix(update(d$f, NULL ~ .), newdata)
   X1_new <- model.matrix(update(d$g, NULL ~ .), newdata)
@@ -77,6 +90,43 @@ predict.deepspat_nn_ST_GP <- function(object, newdata, nn_id, ...) {
 
   }
 
+  warp_out <- list(df_pred = as.data.frame(mmat),
+                   original = as.matrix(mmat),
+                   srescaled = as.matrix(s_in),
+                   trescaled = as.matrix(t_in),
+                   swarped = as.matrix(newdata_swarped),
+                   twarped = as.matrix(newdata_twarped),
+                   obs_swarped = as.matrix(obs_swarped),
+                   obs_twarped = as.matrix(obs_twarped),
+                   newdata_swarped = as.matrix(newdata_swarped),
+                   newdata_twarped = as.matrix(newdata_twarped))
+
+  if (type == "warp") {
+    return(warp_out)
+  }
+
+  if (type == "covariance") {
+    if (d$family %in% c("exp_stat_sep", "exp_nonstat_sep")) {
+      K_s <- cov_exp_tf(x1 = newdata_swarped,
+                        sigma2f = d$sigma2_tf,
+                        alpha = 1/d$l_tf)
+      K_t <- cov_exp_tf(x1 = newdata_twarped,
+                        sigma2f = tf$constant(1, dtype = "float32"),
+                        alpha = 1/d$l_t_tf)
+      K_new <- K_s * K_t
+    } else if (d$family %in% c("exp_stat_asym", "exp_nonstat_asym")) {
+      newdata_vt_tf <- tf$matmul(newdata_twarped, d$v_tf)
+      newdata_s_vt_tf <- newdata_swarped - newdata_vt_tf
+      K_new <- cov_exp_tf(x1 = newdata_s_vt_tf,
+                          sigma2f = d$sigma2_tf,
+                          alpha = 1/d$l_tf)
+    }
+    cov_df <- deepspat_covariance_map(K_new, reference,
+                                       coords = as.data.frame(mmat))
+    out <- c(warp_out, list(df_covariance = cov_df))
+    return(out)
+  }
+
   I <- tf$eye(m) %>% tf$reshape(c(1L, m, m)) %>% tf$tile(c(npred, 1L, 1L))
 
   if (d$family %in% c("exp_stat_sep", "exp_nonstat_sep")){
@@ -128,10 +178,20 @@ predict.deepspat_nn_ST_GP <- function(object, newdata, nn_id, ...) {
   df_pred <- as.data.frame(mmat) %>%
     mutate(pred_mean = as.vector(pred_mean),
            pred_var = as.vector(pred_var),
+           pred_sd = sqrt(as.vector(pred_var)),
            pred_95l = as.vector(pred_95l),
-           pred_95u = as.vector(pred_95u),
+           pred_95u = as.vector(pred_95u)
     )
 
+  if (type == "response") {
+    meas_var <- as.numeric(1/d$precy_tf)
+    df_pred <- df_pred %>%
+      mutate(pred_process_var = pred_var,
+             pred_var = pred_var + meas_var,
+             pred_sd = sqrt(pred_var),
+             pred_95l = pred_mean - 2*pred_sd,
+             pred_95u = pred_mean + 2*pred_sd)
+  }
 
   list(df_pred = df_pred,
        obs_swarped = as.matrix(obs_swarped),

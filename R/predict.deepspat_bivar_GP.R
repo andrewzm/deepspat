@@ -2,6 +2,9 @@
 #' @description Computes predictions and prediction intervals from a fitted \code{deepspat_bivar_GP} object.
 #' @param object the deepspat_bivar_GP object
 #' @param newdata data frame containing the prediction locations
+#' @param type optional prediction type: latent process, response, warped coordinates, or covariance map
+#' @param reference reference-site index for \code{type = "covariance"}
+#' @param component optional component index
 #' @param ... currently unused
 #' @return \code{predict.deepspat_bivar_GP} returns a list with the following item
 #' \describe{
@@ -13,9 +16,20 @@
 #'  }
 #' @export
 
-predict.deepspat_bivar_GP <- function(object, newdata, ...) {
+predict.deepspat_bivar_GP <- function(object, newdata,
+                                      type = NULL,
+                                      reference = NULL, component = NULL, ...) {
   # object = d3; newdata = alldata
 
+  if (missing(newdata)) {
+    stop("`newdata` must be a data frame.", call. = FALSE)
+  }
+  deepspat_check_newdata(object, newdata)
+  type <- if (is.null(type)) "process" else
+    match.arg(type, c("process", "response", "warp", "covariance"))
+  if (!is.null(component) && any(!component %in% 1:2)) {
+    stop("`component` must be 1 or 2.", call. = FALSE)
+  }
   d <- object
   mmat <- model.matrix(update(d$f, NULL ~ .), newdata)
   X1_new <- model.matrix(update(d$g, NULL ~ .), newdata)
@@ -145,6 +159,17 @@ predict.deepspat_bivar_GP <- function(object, newdata, ...) {
 
   }
 
+  warp_out <- list(df_pred = as.data.frame(mmat),
+                   original = as.matrix(mmat),
+                   obs_swarped1 = as.matrix(obs_swarped1),
+                   obs_swarped2 = as.matrix(obs_swarped2),
+                   newdata_swarped1 = as.matrix(newdata_swarped1),
+                   newdata_swarped2 = as.matrix(newdata_swarped2))
+
+  if (type == "warp") {
+    return(warp_out)
+  }
+
   # cov_matern_tf
   if (d$family %in% c("matern_stat_symm",
                     "matern_stat_asymm",
@@ -201,6 +226,15 @@ predict.deepspat_bivar_GP <- function(object, newdata, ...) {
                              tf$concat(list(tf$linalg$matrix_transpose(K_star_12), K_star_22), axis=1L)), axis=0L)
   }
 
+  if (type == "covariance") {
+    cov_df <- deepspat_multivar_covariance_map(K_star, reference,
+                                                n_components = 2L,
+                                                coords = as.data.frame(mmat),
+                                                component = component)
+    out <- c(warp_out, list(df_covariance = cov_df))
+    return(out)
+  }
+
   Sobs_tf_1 <- 1/d$precy_tf_1 * tf$eye(ndata)
   Sobs_tf_2 <- 1/d$precy_tf_2 * tf$eye(ndata)
   Sobs_tf <- tf$concat(list(tf$concat(list(Sobs_tf_1, tf$zeros(shape=c(ndata,ndata), dtype=tf$float32)), axis=1L),
@@ -227,11 +261,36 @@ predict.deepspat_bivar_GP <- function(object, newdata, ...) {
            pred_mean_2 = as.vector(pred_mean[(nrow(newdata)+1):(nrow(newdata)*2),]),
            pred_var_1 = as.vector(pred_var[1:nrow(newdata)]),
            pred_var_2 = as.vector(pred_var[(nrow(newdata)+1):(nrow(newdata)*2)]),
+           pred_sd_1 = sqrt(pred_var_1),
+           pred_sd_2 = sqrt(pred_var_2),
            pred_95l_1 = as.vector(pred_95l[1:nrow(newdata),]),
            pred_95l_2 = as.vector(pred_95l[(nrow(newdata)+1):(nrow(newdata)*2),]),
            pred_95u_1 = as.vector(pred_95u[1:nrow(newdata),]),
            pred_95u_2 = as.vector(pred_95u[(nrow(newdata)+1):(nrow(newdata)*2),])
     )
+
+  if (type == "response") {
+    meas_var_1 <- as.numeric(1/d$precy_tf_1)
+    meas_var_2 <- as.numeric(1/d$precy_tf_2)
+    df_pred <- df_pred %>%
+      mutate(pred_process_var_1 = pred_var_1,
+             pred_process_var_2 = pred_var_2,
+             pred_var_1 = pred_var_1 + meas_var_1,
+             pred_var_2 = pred_var_2 + meas_var_2,
+             pred_sd_1 = sqrt(pred_var_1),
+             pred_sd_2 = sqrt(pred_var_2),
+             pred_95l_1 = pred_mean_1 - 2*pred_sd_1,
+             pred_95l_2 = pred_mean_2 - 2*pred_sd_2,
+             pred_95u_1 = pred_mean_1 + 2*pred_sd_1,
+             pred_95u_2 = pred_mean_2 + 2*pred_sd_2)
+  }
+  if (!is.null(component)) {
+    suffix <- paste0("_", component)
+    pred_cols <- grep("^pred_(mean|var|sd|95l|95u|process_var)_[0-9]+$",
+                      names(df_pred), value = TRUE)
+    drop_cols <- pred_cols[!grepl(paste0(suffix, "$"), pred_cols)]
+    df_pred <- df_pred[, setdiff(names(df_pred), drop_cols), drop = FALSE]
+  }
 
   list(df_pred = df_pred,
        obs_swarped1 = as.matrix(obs_swarped1),
