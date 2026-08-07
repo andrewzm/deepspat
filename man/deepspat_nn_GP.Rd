@@ -2,7 +2,7 @@
 % Please edit documentation in R/deepspat_main_nn_GP.R
 \name{deepspat_nn_GP}
 \alias{deepspat_nn_GP}
-\title{Deep compositional spatial model (with nearest neighbors) for Gaussian processes}
+\title{Fit a nearest-neighbor Gaussian process deepspat model}
 \usage{
 deepspat_nn_GP(
   f,
@@ -70,5 +70,5 @@ deepspat_nn_GP(
  }
 }
 \description{
-Constructs a deep compositional spatial model (with nearest neighbors)
+Fits a stationary or nonstationary Gaussian process model using a nearest-neighbor approximation.
 }

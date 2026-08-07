@@ -2,7 +2,7 @@
 % Please edit documentation in R/deepspat_main_bivar_GP.R
 \name{deepspat_bivar_GP}
 \alias{deepspat_bivar_GP}
-\title{Deep bivariate compositional spatial model for Gaussian processes}
+\title{Fit a bivariate Gaussian process deepspat model}
 \usage{
 deepspat_bivar_GP(
   f,
@@ -80,7 +80,7 @@ deepspat_bivar_GP(
  }
 }
 \description{
-Constructs a deep bivariate compositional spatial model
+Fits a stationary or nonstationary bivariate Gaussian process model with symmetric or asymmetric dependence.
 }
 \examples{
 \donttest{

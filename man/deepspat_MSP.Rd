@@ -2,7 +2,7 @@
 % Please edit documentation in R/deepspat_main_MSP.R
 \name{deepspat_MSP}
 \alias{deepspat_MSP}
-\title{Deep compositional spatial model for max-stable processes}
+\title{Fit a max-stable Brown-Resnick deepspat model}
 \usage{
 deepspat_MSP(
   f,

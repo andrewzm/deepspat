@@ -2,7 +2,7 @@
 % Please edit documentation in R/deepspat_main_rPP.R
 \name{deepspat_rPP}
 \alias{deepspat_rPP}
-\title{Deep compositional spatial model for r-Pareto processes}
+\title{Fit an r-Pareto process deepspat model}
 \usage{
 deepspat_rPP(
   f,

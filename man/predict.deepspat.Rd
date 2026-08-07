@@ -2,7 +2,7 @@
 % Please edit documentation in R/predict.deepspat.R
 \name{predict.deepspat}
 \alias{predict.deepspat}
-\title{Deep compositional spatial model}
+\title{Predict from a fitted deepspat model}
 \usage{
 \method{predict}{deepspat}(object, newdata, nsims = 100L, ...)
 }
@@ -23,5 +23,5 @@
  }
 }
 \description{
-Prediction function for the fitted deepspat object
+Computes predictions and prediction intervals from a fitted \code{deepspat} object.
 }

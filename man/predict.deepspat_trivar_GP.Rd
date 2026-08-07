@@ -2,14 +2,20 @@
 % Please edit documentation in R/predict.deepspat_trivar_GP.R
 \name{predict.deepspat_trivar_GP}
 \alias{predict.deepspat_trivar_GP}
-\title{Deep trivariate compositional spatial model}
+\title{Predict from a fitted trivariate Gaussian process model}
 \usage{
-\method{predict}{deepspat_trivar_GP}(object, newdata, ...)
+\method{predict}{deepspat_trivar_GP}(object, newdata, type = NULL, reference = NULL, component = NULL, ...)
 }
 \arguments{
 \item{object}{the deepspat_trivar_GP object}
 
 \item{newdata}{data frame containing the prediction locations}
+
+\item{type}{optional prediction type: latent process, response, warped coordinates, or covariance map}
+
+\item{reference}{reference-site index for \code{type = "covariance"}}
+
+\item{component}{optional component index}
 
 \item{...}{currently unused}
 }
@@ -20,5 +26,5 @@
  }
 }
 \description{
-Prediction function for the fitted deepspat_trivar_GP object
+Computes predictions and prediction intervals from a fitted \code{deepspat_trivar_GP} object.
 }

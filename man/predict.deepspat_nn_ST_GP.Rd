@@ -2,9 +2,9 @@
 % Please edit documentation in R/predict.deepspat_nn_ST_GP.R
 \name{predict.deepspat_nn_ST_GP}
 \alias{predict.deepspat_nn_ST_GP}
-\title{Deep compositional spatio-temporal model (with nearest neighbors)}
+\title{Predict from a fitted nearest-neighbor spatio-temporal Gaussian process model}
 \usage{
-\method{predict}{deepspat_nn_ST_GP}(object, newdata, nn_id, ...)
+\method{predict}{deepspat_nn_ST_GP}(object, newdata, nn_id = NULL, type = NULL, reference = NULL, ...)
 }
 \arguments{
 \item{object}{the deepspat_nn_ST_GP object}
@@ -12,6 +12,10 @@
 \item{newdata}{data frame containing the prediction locations}
 
 \item{nn_id}{nearest neighbors index}
+
+\item{type}{optional prediction type: latent process, response, warped coordinates, or covariance map}
+
+\item{reference}{reference row index for \code{type = "covariance"}}
 
 \item{...}{currently unused}
 }
@@ -26,5 +30,5 @@
  }
 }
 \description{
-Prediction function for the fitted deepspat_nn_ST_GP object
+Computes predictions and prediction intervals from a fitted \code{deepspat_nn_ST_GP} object.
 }

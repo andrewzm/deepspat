@@ -2,7 +2,7 @@
 % Please edit documentation in R/deepspat_main_GP.R
 \name{deepspat_GP}
 \alias{deepspat_GP}
-\title{Deep compositional spatial model for Gaussian processes}
+\title{Fit a univariate Gaussian process deepspat model}
 \usage{
 deepspat_GP(
   f,
@@ -61,7 +61,7 @@ deepspat_GP(
  }
 }
 \description{
-Constructs a deep compositional spatial model
+Fits a stationary or nonstationary univariate Gaussian process model with optional spatial warping.
 }
 \examples{
 \donttest{
