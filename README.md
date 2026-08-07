@@ -22,8 +22,47 @@ An informal blog post summarising the manuscript concerning the univariate setti
 Installation Instructions
 -------------------------
 
-Please find the installation guide in the file Install_guide.Rmd.
+This is a guide to install all dependencies (such as tensorflow, keras, tfp) for the package, from a fresh environment.
 
+First, create a virtual environment
+
+```r
+## install reticulate first if needed
+## install.packages("reticulate")
+library(reticulate)
+virtualenv_create("r-tensorflow", version = "3.12")
+```
+
+Then, install tensorflow, using the package tensorflow
+```r
+install.packages("tensorflow")
+library(tensorflow)
+install_tensorflow(version = "2.18",
+                   envname = "r-tensorflow",
+                   new_env = FALSE)
+```
+
+
+Install keras, tfprobability, and scipy
+```r
+py_install("tensorflow_probability==0.25.0", pip = TRUE)
+py_install("tf.keras==2.18.0", pip = TRUE)
+py_install("scipy", pip = TRUE)
+```
+
+Then install deepspat
+```r
+install.packages("deepspat")
+library(deepspat)
+```
+
+Check by constructing the warping layers
+```r
+layers <- c(AWU(r = 50L, dim = 1L, grad = 50, lims = c(-0.5, 0.5)),
+            AWU(r = 50L, dim = 2L, grad = 50, lims = c(-0.5, 0.5)),
+            RBF_block(),
+            LFT())
+```
 
 Reproducible Code
 -----------------
