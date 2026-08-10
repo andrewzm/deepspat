@@ -24,7 +24,7 @@ Description: Deep compositional spatial models are standard spatial covariance
              Vu et al. (2023) <doi:10.1016/j.spasta.2023.100742>, and
              Shao et al. (2025) <doi:10.48550/arXiv.2505.12548>.
 License: Apache License 2.0
-Imports: data.table, dplyr, Matrix, methods, reticulate, keras, tensorflow, tfprobability, evd, SpatialExtremes, fields
+Imports: data.table, dplyr, Matrix, methods, rlang, reticulate, keras, tensorflow, tfprobability, evd, SpatialExtremes, fields
 SystemRequirements: TensorFlow (https://www.tensorflow.org/),
 Encoding: UTF-8
 RoxygenNote: 7.3.2
