@@ -261,8 +261,8 @@ predict.deepspat_bivar_GP <- function(object, newdata,
            pred_mean_2 = as.vector(pred_mean[(nrow(newdata)+1):(nrow(newdata)*2),]),
            pred_var_1 = as.vector(pred_var[1:nrow(newdata)]),
            pred_var_2 = as.vector(pred_var[(nrow(newdata)+1):(nrow(newdata)*2)]),
-           pred_sd_1 = sqrt(pred_var_1),
-           pred_sd_2 = sqrt(pred_var_2),
+           pred_sd_1 = sqrt(.data$pred_var_1),
+           pred_sd_2 = sqrt(.data$pred_var_2),
            pred_95l_1 = as.vector(pred_95l[1:nrow(newdata),]),
            pred_95l_2 = as.vector(pred_95l[(nrow(newdata)+1):(nrow(newdata)*2),]),
            pred_95u_1 = as.vector(pred_95u[1:nrow(newdata),]),
@@ -273,16 +273,16 @@ predict.deepspat_bivar_GP <- function(object, newdata,
     meas_var_1 <- as.numeric(1/d$precy_tf_1)
     meas_var_2 <- as.numeric(1/d$precy_tf_2)
     df_pred <- df_pred %>%
-      mutate(pred_process_var_1 = pred_var_1,
-             pred_process_var_2 = pred_var_2,
-             pred_var_1 = pred_var_1 + meas_var_1,
-             pred_var_2 = pred_var_2 + meas_var_2,
-             pred_sd_1 = sqrt(pred_var_1),
-             pred_sd_2 = sqrt(pred_var_2),
-             pred_95l_1 = pred_mean_1 - 2*pred_sd_1,
-             pred_95l_2 = pred_mean_2 - 2*pred_sd_2,
-             pred_95u_1 = pred_mean_1 + 2*pred_sd_1,
-             pred_95u_2 = pred_mean_2 + 2*pred_sd_2)
+      mutate(pred_process_var_1 = .data$pred_var_1,
+             pred_process_var_2 = .data$pred_var_2,
+             pred_var_1 = .data$pred_var_1 + meas_var_1,
+             pred_var_2 = .data$pred_var_2 + meas_var_2,
+             pred_sd_1 = sqrt(.data$pred_var_1),
+             pred_sd_2 = sqrt(.data$pred_var_2),
+             pred_95l_1 = .data$pred_mean_1 - 2*.data$pred_sd_1,
+             pred_95l_2 = .data$pred_mean_2 - 2*.data$pred_sd_2,
+             pred_95u_1 = .data$pred_mean_1 + 2*.data$pred_sd_1,
+             pred_95u_2 = .data$pred_mean_2 + 2*.data$pred_sd_2)
   }
   if (!is.null(component)) {
     suffix <- paste0("_", component)

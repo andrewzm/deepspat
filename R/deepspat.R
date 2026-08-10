@@ -25,8 +25,9 @@
 #' @importFrom Matrix crossprod tcrossprod colSums
 #' @importFrom data.table rbindlist
 #' @importFrom methods is
-#' @importFrom stats cov dist model.matrix var qnorm pnorm rnorm runif rbinom terms quantile update ecdf
-#' @importFrom utils str globalVariables
+#' @importFrom rlang .data
+#' @importFrom stats cov dist model.matrix var qnorm pnorm rnorm runif rbinom terms quantile update ecdf predict
+#' @importFrom utils str globalVariables head tail
 #' @importFrom evd fpot
 #' @importFrom fields rdist
 #' @importFrom keras zip_lists

@@ -68,4 +68,4 @@ besselK_R <- function(x, nu) {
   bessel_func(x, nu)
 }
 
-globalVariables(c("besselK_R", "tape", "tape1"))
+utils::globalVariables(c("besselK_R", "tape", "tape1"))

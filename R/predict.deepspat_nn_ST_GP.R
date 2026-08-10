@@ -186,11 +186,11 @@ predict.deepspat_nn_ST_GP <- function(object, newdata, nn_id = NULL,
   if (type == "response") {
     meas_var <- as.numeric(1/d$precy_tf)
     df_pred <- df_pred %>%
-      mutate(pred_process_var = pred_var,
-             pred_var = pred_var + meas_var,
-             pred_sd = sqrt(pred_var),
-             pred_95l = pred_mean - 2*pred_sd,
-             pred_95u = pred_mean + 2*pred_sd)
+      mutate(pred_process_var = .data$pred_var,
+             pred_var = .data$pred_var + meas_var,
+             pred_sd = sqrt(.data$pred_var),
+             pred_95l = .data$pred_mean - 2*.data$pred_sd,
+             pred_95u = .data$pred_mean + 2*.data$pred_sd)
   }
 
   list(df_pred = df_pred,
