@@ -1,3 +1,8 @@
+# deepspat 0.3.2
+
+* Add functions print(), summary(), plot(). Add checks in the package.
+Update some documentation.
+
 # deepspat 0.3.1
 
 * Fix the module tensorflow issues. Update some documentation.
