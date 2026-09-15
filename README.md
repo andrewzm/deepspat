@@ -30,24 +30,40 @@ First, create a virtual environment
 ## install reticulate first if needed
 ## install.packages("reticulate")
 library(reticulate)
-virtualenv_create("r-tensorflow", version = "3.12")
+py_version <- "3.12:latest"
+envname <- file.path(getwd(), "deepspat_venv")
+path_to_python <- install_python(version = py_version)
+
+virtualenv_create(
+  envname = envname,
+  python = path_to_python,
+  version = py_version
+)
+use_virtualenv(envname, required = TRUE)
 ```
 
-Then, install tensorflow, using the package tensorflow
+Then, install tensorflow
 ```r
-install.packages("tensorflow")
-library(tensorflow)
-install_tensorflow(version = "2.18",
-                   envname = "r-tensorflow",
-                   new_env = FALSE)
+virtualenv_install(
+  envname = envname,
+  packages = "tensorflow==2.18.0"
+)
 ```
 
 
 Install keras, tfprobability, and scipy
 ```r
-py_install("tensorflow_probability==0.25.0", pip = TRUE)
-py_install("tf.keras==2.18.0", pip = TRUE)
-py_install("scipy", pip = TRUE)
+virtualenv_install(
+  envname = envname,
+  packages = c(
+    "tensorflow-probability==0.25.0",
+    "tf-keras==2.18.0",
+    "scipy"
+  )
+)
+
+# The Python path shown below should point to `deepspat_venv`.
+py_config()
 ```
 
 Then install deepspat
