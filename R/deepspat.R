@@ -21,7 +21,6 @@
 #' @import reticulate
 #' @import tensorflow
 #' @import tfprobability
-#' @import SpatialExtremes
 #' @importFrom Matrix crossprod tcrossprod colSums
 #' @importFrom data.table rbindlist
 #' @importFrom methods is

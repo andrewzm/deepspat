@@ -10,6 +10,7 @@
 #'  \item{"f"}{An encapsulated function that takes an input and evaluates the sigmoids over the \code{dim}-th dimension using \code{TensorFlow}}
 #'  \item{"r"}{The number of sigmoid basis functions}
 #'  \item{"knots_tf"}{The centroids of the basis functions as a TensorFlow object}
+#'  \item{"name"}{Name of layer}
 #' }
 #' @export
 
@@ -37,7 +38,8 @@ bisquares1D <- function(r = 30, lims = c(-0.5, 0.5), dtype = "float32") {
   
   list(list(f = f,
             r = r,
-            knots_tf = knots_tf))
+            knots_tf = knots_tf,
+            name = "bisquares1D"))
   
 }
 
@@ -57,6 +59,7 @@ bisquares1D <- function(r = 30, lims = c(-0.5, 0.5), dtype = "float32") {
 #'  \item{"r"}{The number of sigmoid basis functions}
 #'  \item{"knots_tf"}{The centroids of the basis functions as a \code{TensorFlow} object}
 #'  \item{"knots"}{The centroids of the basis functions as an \code{R} object}
+#'  \item{"name"}{Name of layer}
 #' }
 #' @export
 
@@ -95,5 +98,6 @@ bisquares2D <- function(r = 30, lims = c(-0.5, 0.5), dtype = "float32") {
             fR = fR,
             r = r,
             knots = knots2D,
-            knots_tf = knots2D_tf))
+            knots_tf = knots2D_tf,
+            name = "bisquares2D"))
 }

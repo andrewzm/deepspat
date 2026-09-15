@@ -99,6 +99,17 @@ summary.deepspat_rPP <- function(object, newdata = NULL, vcov = FALSE,
 }
 
 summary_deepspat_fit <- function(object, model_type, vcov = NULL) {
+  layer_names <- function(x) {
+    vapply(x, function(layer) {
+      name <- layer$name
+      if (!is.character(name) || length(name) != 1L || is.na(name) || !nzchar(name)) {
+        "<unnamed>"
+      } else {
+        name
+      }
+    }, character(1L))
+  }
+
   parameters <- list()
   if (inherits(object, "deepspat_MSP") || inherits(object, "deepspat_rPP")) {
     if (!is.null(object$logphi_tf)) parameters[["fitted.phi"]] <- as.numeric(exp(object$logphi_tf))
@@ -113,12 +124,12 @@ summary_deepspat_fit <- function(object, model_type, vcov = NULL) {
   }
 
   layers <- list()
-  if (!is.null(object$layers)) layers$layers <- vapply(object$layers, function(x) x$name, character(1L))
-  if (!is.null(object$layers_spat)) layers$spatial <- vapply(object$layers_spat, function(x) x$name, character(1L))
-  if (!is.null(object$layers_temp)) layers$temporal <- vapply(object$layers_temp, function(x) x$name, character(1L))
-  if (!is.null(object$layers_asym)) layers$asymmetry <- vapply(object$layers_asym, function(x) x$name, character(1L))
-  if (!is.null(object$layers_asym_2)) layers$asymmetry_2 <- vapply(object$layers_asym_2, function(x) x$name, character(1L))
-  if (!is.null(object$layers_asym_3)) layers$asymmetry_3 <- vapply(object$layers_asym_3, function(x) x$name, character(1L))
+  if (!is.null(object$layers)) layers$layers <- layer_names(object$layers)
+  if (!is.null(object$layers_spat)) layers$spatial <- layer_names(object$layers_spat)
+  if (!is.null(object$layers_temp)) layers$temporal <- layer_names(object$layers_temp)
+  if (!is.null(object$layers_asym)) layers$asymmetry <- layer_names(object$layers_asym)
+  if (!is.null(object$layers_asym_2)) layers$asymmetry_2 <- layer_names(object$layers_asym_2)
+  if (!is.null(object$layers_asym_3)) layers$asymmetry_3 <- layer_names(object$layers_asym_3)
 
   z <- if (!is.null(object$z_tf)) object$z_tf else object$z_tf_1
   z_dim <- tryCatch(dim(z), error = function(e) NULL)
