@@ -21,6 +21,7 @@ bisquares2D(r = 30, lims = c(-0.5, 0.5), dtype = "float32")
  \item{"r"}{The number of sigmoid basis functions}
  \item{"knots_tf"}{The centroids of the basis functions as a \code{TensorFlow} object}
  \item{"knots"}{The centroids of the basis functions as an \code{R} object}
+ \item{"name"}{Name of layer}
 }
 }
 \description{

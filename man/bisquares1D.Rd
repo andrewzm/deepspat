@@ -19,6 +19,7 @@ bisquares1D(r = 30, lims = c(-0.5, 0.5), dtype = "float32")
  \item{"f"}{An encapsulated function that takes an input and evaluates the sigmoids over the \code{dim}-th dimension using \code{TensorFlow}}
  \item{"r"}{The number of sigmoid basis functions}
  \item{"knots_tf"}{The centroids of the basis functions as a TensorFlow object}
+ \item{"name"}{Name of layer}
 }
 }
 \description{
