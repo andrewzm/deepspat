@@ -1,4 +1,4 @@
-# deepspat 0.3.2.9000
+# deepspat 0.3.3
 
 * Remove redundant dependency
 
