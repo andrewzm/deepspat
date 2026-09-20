@@ -81,15 +81,10 @@ predict.deepspat_MSP <- function(object, newdata,
         loss_obj$Cost_items
       }
 
-      del <- 1e-8
-      deppar_del1 <- tf$Variable(deppar + c(del, 0))
-      deppar_del2 <- tf$Variable(deppar + c(0, del))
-      cost0 <- Cost_fn1(deppar, pairs_tf)
-      cost1 <- Cost_fn1(deppar_del1, pairs_tf)
-      cost2 <- Cost_fn1(deppar_del2, pairs_tf)
-      dcost1 <- (cost1 - cost0) / del
-      dcost2 <- (cost2 - cost0) / del
-      jaco_loss <- tf$stack(list(dcost1, dcost2), axis = 2L)
+      with(tf$GradientTape() %as% tape, {
+        loss <- Cost_fn1(deppar, pairs_tf)
+      })
+      jaco_loss <- tape$jacobian(loss, deppar)
     } else if (d$method == "WLS") {
       if (is.null(edm_emp)) {
         stop("`edm_emp` must be provided when `se = TRUE` for WLS fits.",
