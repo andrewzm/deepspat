@@ -105,6 +105,7 @@ predict.deepspat_GP <- function(object, newdata,
    pred_mean <- tf$matmul(tf$linalg$matrix_transpose(Kobs_chol_star), Kobs_chol_z)
    pred_mean <- pred_mean + tf$matmul(X_new, d$beta)
    pred_var <- tf$linalg$diag_part(K_star - tf$matmul(tf$linalg$matrix_transpose(Kobs_chol_star), Kobs_chol_star))
+   pred_var <- tf$maximum(pred_var, tf$constant(1e-6, dtype = pred_var$dtype))
 
    pred_mean = as.vector(pred_mean)
    pred_var = as.vector(pred_var)

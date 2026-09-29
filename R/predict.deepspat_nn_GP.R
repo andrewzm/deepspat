@@ -114,6 +114,7 @@ predict.deepspat_nn_GP <- function(object, newdata, nn_id = NULL,
 
   pred_mean <- tf$matmul(X_new, beta) + A_Z_Xbeta
   pred_var <- (K3 - tf$matmul(tf$matmul(tf$linalg$matrix_transpose(K2), tf$linalg$inv(K1)), K2)) %>% tf$reshape(c(npred, 1L))
+  pred_var <- tf$maximum(pred_var, tf$constant(1e-6, dtype = pred_var$dtype))
 
   pred_95l <- pred_mean - 2*tf$sqrt(pred_var)
   pred_95u <- pred_mean + 2*tf$sqrt(pred_var)
