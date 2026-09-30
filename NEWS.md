@@ -1,3 +1,7 @@
+# deepspat 0.3.4
+
+* Fix variance issues
+
 # deepspat 0.3.3
 
 * Remove redundant dependency
