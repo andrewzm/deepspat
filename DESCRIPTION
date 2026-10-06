@@ -1,8 +1,8 @@
 Package: deepspat
 Type: Package
 Title: Deep Compositional Spatial Models
-Date: 2026-09-30
-Version: 0.3.4
+Date: 2026-10-07
+Version: 0.3.5
 Authors@R: c(person(given = "Andrew", family = "Zammit-Mangion", role = "aut"), 
              person(given = "Quan", family = "Vu", role = c("aut", "cre"),
              email = "quanvustats@gmail.com"),

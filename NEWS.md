@@ -1,3 +1,7 @@
+# deepspat 0.3.5
+
+* Fix predict.deepspat_MSP
+
 # deepspat 0.3.4
 
 * Fix variance issues
