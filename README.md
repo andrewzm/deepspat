@@ -32,7 +32,10 @@ First, create a virtual environment
 library(reticulate)
 py_version <- "3.12:latest"
 envname <- file.path(getwd(), "deepspat_venv")
-path_to_python <- install_python(version = py_version)
+path_to_python <- virtualenv_starter("3.12")
+if (is.null(path_to_python)) {
+  path_to_python <- install_python(version = py_version)
+}
 
 virtualenv_create(
   envname = envname,
@@ -41,6 +44,8 @@ virtualenv_create(
 )
 use_virtualenv(envname, required = TRUE)
 ```
+
+This reuses an existing Python 3.12 installation when available and only installs Python when none is found. Avoid forcing `install_python()`, as this may overwrite an existing reticulate-managed Python installation.
 
 Then, install tensorflow
 ```r
@@ -68,7 +73,9 @@ py_config()
 
 Then install deepspat
 ```r
-install.packages("deepspat")
+# Install from source because CRAN binaries for older R versions may be outdated.
+install.packages("deepspat", type = "source")
+stopifnot(packageVersion("deepspat") >= package_version("0.3.5"))
 library(deepspat)
 ```
 
