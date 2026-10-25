@@ -24,7 +24,17 @@ Installation Instructions
 
 This is a guide to install all dependencies (such as tensorflow, keras, tfp) for the package, from a fresh environment.
 
-First, create a virtual environment
+First, install the latest CRAN source version of `deepspat` if it is missing or outdated.
+
+```r
+if (!requireNamespace("deepspat", quietly = TRUE) ||
+    "deepspat" %in% rownames(old.packages(type = "source"))) {
+  install.packages("deepspat", type = "source")
+}
+library(deepspat)
+```
+
+Then, create a virtual environment.
 
 ```r
 ## install reticulate first if needed
@@ -69,14 +79,6 @@ virtualenv_install(
 
 # The Python path shown below should point to `deepspat_venv`.
 py_config()
-```
-
-Then install deepspat
-```r
-# Install from source because CRAN binaries for older R versions may be outdated.
-install.packages("deepspat", type = "source")
-stopifnot(packageVersion("deepspat") >= package_version("0.3.5"))
-library(deepspat)
 ```
 
 Check by constructing the warping layers
